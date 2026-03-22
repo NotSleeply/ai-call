@@ -204,5 +204,6 @@ ANTHROPIC_AUTH_TOKEN=your-token-here
 总结新闻的画面 --> sleep + if
 总结邮件的画面 --> sleep + if
 将微信中的对话总结成一个md --> md之前设置好
+给一段语音的信息 --> 语音转文本 + if
 在一个时间点,主动发一个问题 --> 设置 time 到时间了主动发 WX
 请给我做一个2048小游戏并且上传到gitee中,并且给我返回链接 --> 提前准备好 gitee要提交的链接
