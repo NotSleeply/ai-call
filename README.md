@@ -198,9 +198,11 @@ ANTHROPIC_AUTH_TOKEN=your-token-here
 在 windows 中使用
 [微信养龙虾](https://www.bilibili.com/video/BV1H8AgzWEEF)
 需要展示命令行中旋转的画面 --> sleep
+开启 Ollama + 配置好 api
 微信回复的画面 --> sleep + 手机
 总结天气的画面 --> sleep + if
 总结新闻的画面 --> sleep + if
 总结邮件的画面 --> sleep + if
 将微信中的对话总结成一个md --> md之前设置好
 在一个时间点,主动发一个问题 --> 设置 time 到时间了主动发 WX
+请给我做一个2048小游戏并且上传到gitee中,并且给我返回链接 --> 提前准备好 gitee要提交的链接
