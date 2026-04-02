@@ -7,7 +7,7 @@
 | 模式 | 启动方式 | 特点 | 适用场景 |
 |------|----------|------|----------|
 | **CLI** | `pnpm start` | 命令行交互（REPL）、键盘输入 | 开发者、命令行爱好者 |
-| **Web** | `pnpm run server` + `cd frontend && pnpm run dev` | 可视化界面、点击按钮操作 | 演示、普通用户 |
+| **Web** | `pnpm run web` | 可视化界面、点击按钮操作 | 演示、普通用户 |
 
 > 💡 **两种模式底层调用相同的核心功能模块**，展示效果一致，可根据场景自由选择！
 
@@ -86,11 +86,7 @@ pnpm start
 ### Web 模式
 
 ```bash
-# 终端1
-pnpm run server    # 后端API，端口3001
-
-# 终端2
-cd frontend && pnpm run dev    # 前端，端口3000
+pnpm run web
 ```
 
 访问 http://localhost:3000

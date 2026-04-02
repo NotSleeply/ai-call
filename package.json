@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
     "demo": "node dist/demo.js",
-    "server": "node dist/server.js"
+    "server": "node dist/server.js",
+    "web": "concurrently \"pnpm run server\" \"cd frontend && pnpm run dev\""
   },
   "keywords": [
     "daxia",
@@ -19,13 +20,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.0",
-    "cors": "^2.8.0"
+    "cors": "^2.8.0",
+    "express": "^4.18.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/express": "^4.17.0",
     "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.11.0",
+    "concurrently": "^9.2.1",
     "typescript": "^5.3.0"
   }
 }
