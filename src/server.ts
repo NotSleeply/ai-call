@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { DaxiaAssistant } from './assistant.js';
+import { ConversationModel, MessageModel } from './database.js';
 
 const app = express();
 const PORT = 3001;
@@ -13,9 +14,68 @@ app.use(express.json());
 // 创建助手实例
 const assistant = new DaxiaAssistant();
 
+// ==================== 对话相关 API ====================
+
+// 获取对话列表
+app.get('/api/conversations', (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 20;
+  const conversations = ConversationModel.list(limit);
+  res.json({ success: true, data: conversations });
+});
+
+// 创建新对话
+app.post('/api/conversations', (req: Request, res: Response) => {
+  const { title } = req.body;
+  const conversation = ConversationModel.create(title || '新对话');
+  res.json({ success: true, data: conversation });
+});
+
+// 获取对话详情（包含消息）
+app.get('/api/conversations/:id', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const conversation = ConversationModel.getById(id);
+  
+  if (!conversation) {
+    return res.json({ success: false, message: '对话不存在' });
+  }
+  
+  const messages = MessageModel.getByConversation(id);
+  res.json({ success: true, data: { ...conversation, messages } });
+});
+
+// 更新对话标题
+app.put('/api/conversations/:id', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { title } = req.body;
+  
+  if (!title) {
+    return res.json({ success: false, message: '标题不能为空' });
+  }
+  
+  ConversationModel.updateTitle(id, title);
+  const conversation = ConversationModel.getById(id);
+  res.json({ success: true, data: conversation });
+});
+
+// 删除对话
+app.delete('/api/conversations/:id', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  ConversationModel.delete(id);
+  res.json({ success: true, message: '删除成功' });
+});
+
+// 获取对话消息
+app.get('/api/conversations/:id/messages', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const messages = MessageModel.getByConversation(id);
+  res.json({ success: true, data: messages });
+});
+
+// ==================== 命令执行 API ====================
+
 // 命令处理接口
 app.post('/api/command', async (req: Request, res: Response) => {
-  const { command, args = [] } = req.body;
+  const { command, args = [], conversationId } = req.body;
 
   if (!command) {
     return res.json({
@@ -24,7 +84,13 @@ app.post('/api/command', async (req: Request, res: Response) => {
     });
   }
 
+  // 如果没有指定对话ID，使用默认对话
+  const convId = conversationId || 1;
+
   try {
+    // 保存用户消息
+    MessageModel.add(convId, 'user', command);
+
     let data: any = '';
 
     // 捕获console.log输出
@@ -36,7 +102,7 @@ app.post('/api/command', async (req: Request, res: Response) => {
     };
 
     // 执行命令
-    switch (command.toLowerCase()) {
+    switch (command.toLowerCase().split(' ')[0]) {
       case 'weather':
         await assistant.summarizeWeather();
         break;
@@ -53,12 +119,13 @@ app.post('/api/command', async (req: Request, res: Response) => {
         // 生成二维码图片（Web端用）
         const qrCodeUrl = await assistant.generateQRCodeBase64();
         await assistant.connectWeChat();
-        data = { qrCodeUrl, message: logs.join('\n') };
+        // 保存助手消息（带二维码）
+        MessageModel.add(convId, 'assistant', '请使用微信扫描二维码登录', qrCodeUrl);
         console.log = originalLog;
         return res.json({
           success: true,
           message: '微信连接成功',
-          data
+          data: { qrCodeUrl, message: logs.join('\n') }
         });
       case 'analyze':
         await assistant.analyzeProject();
@@ -75,12 +142,22 @@ app.post('/api/command', async (req: Request, res: Response) => {
 
     data = logs.join('\n');
 
+    // 保存助手消息
+    MessageModel.add(convId, 'assistant', data);
+
+    // 如果是新对话的第一条消息，更新标题
+    const conv = ConversationModel.getById(convId);
+    if (conv && conv.title === '新对话') {
+      ConversationModel.updateTitle(convId, command.slice(0, 20) + (command.length > 20 ? '...' : ''));
+    }
+
     res.json({
       success: true,
       message: '命令执行成功',
       data
     });
   } catch (error: any) {
+    console.log = originalLog;
     res.json({
       success: false,
       message: error.message || '命令执行失败'

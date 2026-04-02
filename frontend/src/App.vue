@@ -28,15 +28,23 @@
           :key="chat.id"
           @click="selectChat(chat.id)"
           :class="[
-            'p-3 rounded-lg cursor-pointer transition-colors',
+            'p-3 rounded-lg cursor-pointer transition-colors group',
             chat.id === currentChatId ? 'bg-gray-700' : 'hover:bg-gray-800'
           ]"
         >
-          <div class="flex items-center space-x-2">
-            <span>💬</span>
-            <span class="text-sm truncate">{{ chat.title }}</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2 flex-1 min-w-0">
+              <span>💬</span>
+              <span class="text-sm truncate">{{ chat.title }}</span>
+            </div>
+            <button
+              @click.stop="deleteChat(chat.id)"
+              class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-opacity"
+            >
+              🗑️
+            </button>
           </div>
-          <div class="text-xs text-gray-400 mt-1">{{ chat.time }}</div>
+          <div class="text-xs text-gray-400 mt-1">{{ formatTime(chat.updated_at) }}</div>
         </div>
       </div>
 
@@ -76,14 +84,14 @@
         </div>
 
         <!-- 消息列表 -->
-        <div v-for="(msg, index) in messages" :key="index" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+        <div v-for="msg in messages" :key="msg.id" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
           <div :class="['max-w-2xl rounded-lg p-4', msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800']">
             <div v-if="msg.role === 'assistant'" class="flex items-center space-x-2 mb-2">
               <span>🦐</span>
               <span class="font-medium">大虾</span>
             </div>
             <!-- 二维码图片 -->
-            <img v-if="msg.qrCode" :src="msg.qrCode" alt="微信二维码" class="mb-4 rounded-lg" />
+            <img v-if="msg.qr_code" :src="msg.qr_code" alt="微信二维码" class="mb-4 rounded-lg" />
             <pre class="whitespace-pre-wrap text-sm font-sans">{{ msg.content }}</pre>
           </div>
         </div>
@@ -128,21 +136,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
-import { daxiaAPI } from './api/daxia'
-
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-  qrCode?: string
-}
-
-interface Chat {
-  id: number
-  title: string
-  time: string
-  messages: Message[]
-}
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { daxiaAPI, type Conversation, type Message } from './api/daxia'
 
 const isConnected = ref(false)
 const loading = ref(false)
@@ -151,17 +146,10 @@ const inputText = ref('')
 const currentChatId = ref(1)
 const messageListRef = ref<HTMLElement | null>(null)
 
-const chatList = ref<Chat[]>([
-  { id: 1, title: '新对话', time: '刚刚', messages: [] }
-])
+const chatList = ref<Conversation[]>([])
+const messages = ref<Message[]>([])
 
 const currentChat = computed(() => chatList.value.find(c => c.id === currentChatId.value))
-const messages = computed(() => currentChat.value?.messages || [])
-
-// 启动时检测连接状态
-onMounted(async () => {
-  isConnected.value = await daxiaAPI.healthCheck()
-})
 
 const quickCommands = [
   { name: 'weather', label: '天气', icon: '🌤️' },
@@ -182,6 +170,18 @@ const commandConfig: Record<string, { loading: string }> = {
   help: { loading: '获取帮助信息...' },
 }
 
+// 格式化时间
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  return date.toLocaleDateString('zh-CN')
+}
+
 function scrollToBottom() {
   nextTick(() => {
     if (messageListRef.value) {
@@ -190,38 +190,77 @@ function scrollToBottom() {
   })
 }
 
-function createNewChat() {
-  const newId = Math.max(...chatList.value.map(c => c.id)) + 1
-  chatList.value.unshift({
-    id: newId,
-    title: '新对话',
-    time: '刚刚',
-    messages: []
-  })
-  currentChatId.value = newId
+// 加载对话列表
+async function loadChatList() {
+  try {
+    chatList.value = await daxiaAPI.getConversations()
+    if (chatList.value.length > 0 && !chatList.value.find(c => c.id === currentChatId.value)) {
+      currentChatId.value = chatList.value[0].id
+    }
+  } catch (error) {
+    console.error('加载对话列表失败:', error)
+  }
+}
+
+// 加载对话消息
+async function loadMessages() {
+  if (!currentChatId.value) return
+  
+  try {
+    const conv = await daxiaAPI.getConversation(currentChatId.value)
+    messages.value = conv.messages || []
+    scrollToBottom()
+  } catch (error) {
+    console.error('加载消息失败:', error)
+    messages.value = []
+  }
+}
+
+// 监听对话切换
+watch(currentChatId, () => {
+  loadMessages()
+})
+
+async function createNewChat() {
+  try {
+    const conv = await daxiaAPI.createConversation()
+    chatList.value.unshift(conv)
+    currentChatId.value = conv.id
+    messages.value = []
+  } catch (error) {
+    console.error('创建对话失败:', error)
+  }
 }
 
 function selectChat(id: number) {
   currentChatId.value = id
 }
 
+async function deleteChat(id: number) {
+  if (!confirm('确定要删除这个对话吗？')) return
+  
+  try {
+    await daxiaAPI.deleteConversation(id)
+    chatList.value = chatList.value.filter(c => c.id !== id)
+    
+    if (currentChatId.value === id) {
+      if (chatList.value.length > 0) {
+        currentChatId.value = chatList.value[0].id
+      } else {
+        await createNewChat()
+      }
+    }
+  } catch (error) {
+    console.error('删除对话失败:', error)
+  }
+}
+
 async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
-  // 添加用户消息
-  const chat = chatList.value.find(c => c.id === currentChatId.value)
-  if (chat) {
-    chat.messages.push({ role: 'user', content: text })
-    // 更新对话标题
-    if (chat.title === '新对话') {
-      chat.title = text.slice(0, 15) + (text.length > 15 ? '...' : '')
-    }
-  }
-
   inputText.value = ''
-  scrollToBottom()
-
+  
   // 判断是否是命令
   const isCommand = ['weather', 'news', 'email', 'summary', 'wx', 'analyze', 'help', 'read', 'write', 'list', 'search', 'exec'].includes(text.split(' ')[0])
   
@@ -231,6 +270,10 @@ async function sendMessage() {
     // 普通对话
     await handleChat(text)
   }
+  
+  // 刷新消息列表
+  await loadMessages()
+  await loadChatList()
 }
 
 async function sendQuickCommand(command: string) {
@@ -245,34 +288,10 @@ async function executeCommand(command: string) {
   loadingText.value = config.loading
 
   try {
-    const response = await daxiaAPI.executeCommand(command)
-    
-    const chat = chatList.value.find(c => c.id === currentChatId.value)
-    if (chat) {
-      if (response.success) {
-        // 处理二维码
-        if (response.data?.qrCodeUrl) {
-          chat.messages.push({ 
-            role: 'assistant', 
-            content: '请使用微信扫描二维码登录',
-            qrCode: response.data.qrCodeUrl
-          })
-        } else {
-          const content = typeof response.data === 'string' 
-            ? response.data 
-            : JSON.stringify(response.data, null, 2)
-          chat.messages.push({ role: 'assistant', content })
-        }
-        isConnected.value = true
-      } else {
-        chat.messages.push({ role: 'assistant', content: `❌ 错误: ${response.message}` })
-      }
-    }
+    await daxiaAPI.executeCommand(command, currentChatId.value)
+    isConnected.value = true
   } catch (error: any) {
-    const chat = chatList.value.find(c => c.id === currentChatId.value)
-    if (chat) {
-      chat.messages.push({ role: 'assistant', content: `❌ 请求失败: ${error.message}` })
-    }
+    console.error('执行命令失败:', error)
   } finally {
     loading.value = false
     scrollToBottom()
@@ -284,29 +303,21 @@ async function handleChat(text: string) {
   loadingText.value = '思考中...'
 
   try {
-    const response = await daxiaAPI.executeCommand(`ask ${text}`)
-    
-    const chat = chatList.value.find(c => c.id === currentChatId.value)
-    if (chat) {
-      if (response.success) {
-        const content = typeof response.data === 'string' 
-          ? response.data 
-          : JSON.stringify(response.data, null, 2)
-        chat.messages.push({ role: 'assistant', content })
-      } else {
-        chat.messages.push({ role: 'assistant', content: `❌ 错误: ${response.message}` })
-      }
-    }
+    await daxiaAPI.executeCommand(text, currentChatId.value)
   } catch (error: any) {
-    const chat = chatList.value.find(c => c.id === currentChatId.value)
-    if (chat) {
-      chat.messages.push({ role: 'assistant', content: `❌ 请求失败: ${error.message}` })
-    }
+    console.error('对话失败:', error)
   } finally {
     loading.value = false
     scrollToBottom()
   }
 }
+
+// 启动时检测连接状态并加载数据
+onMounted(async () => {
+  isConnected.value = await daxiaAPI.healthCheck()
+  await loadChatList()
+  await loadMessages()
+})
 </script>
 
 <style scoped>
