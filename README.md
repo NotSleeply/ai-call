@@ -7,35 +7,42 @@
 本Demo演示了大虾的核心能力：
 
 ### 📁 文件操作
+
 - **read** - 读取文件内容
 - **write** - 写入文件内容
 - **list** - 列出目录内容
 - **search** - 搜索代码内容
 
 ### ⚡ 命令执行
+
 - **exec** - 执行系统命令
 
 ### 🧠 智能分析
+
 - **analyze** - 分析项目结构
 - **ask** - 智能问答
 
 ### 💬 自然语言交互
+
 - 支持自然语言对话
 - 智能理解用户意图
 
 ## 快速开始
 
 ### 安装依赖
+
 ```bash
 pnpm install
 ```
 
 ### 编译项目
+
 ```bash
 pnpm run build
 ```
 
 ### 运行Demo
+
 ```bash
 pnpm start
 ```
@@ -57,6 +64,7 @@ pnpm start
 ## 演示场景
 
 ### 场景1：文件操作
+
 ```
 > read package.json
 > write demo.txt 这是一个演示文件
@@ -64,6 +72,7 @@ pnpm start
 ```
 
 ### 场景2：代码搜索
+
 ```
 > search class
 > search import
@@ -71,11 +80,13 @@ pnpm start
 ```
 
 ### 场景3：项目分析
+
 ```
 > analyze
 ```
 
 ### 场景4：智能问答
+
 ```
 > ask 什么是TypeScript?
 > ask 大虾能做什么?
@@ -83,6 +94,7 @@ pnpm start
 ```
 
 ### 场景5：命令执行
+
 ```
 > exec dir
 > exec echo Hello World

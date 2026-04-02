@@ -10,7 +10,11 @@
     "dev": "tsc && node dist/index.js",
     "demo": "node dist/demo.js"
   },
-  "keywords": ["daxia", "demo", "assistant"],
+  "keywords": [
+    "daxia",
+    "demo",
+    "assistant"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
