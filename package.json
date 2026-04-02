@@ -1,0 +1,20 @@
+{
+  "name": "daxia-demo",
+  "version": "1.0.0",
+  "description": "大虾功能演示Demo",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "demo": "node dist/demo.js"
+  },
+  "keywords": ["daxia", "demo", "assistant"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0"
+  }
+}
