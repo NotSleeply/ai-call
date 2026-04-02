@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { daxiaAPI } from './api/daxia'
 
 interface Message {
@@ -154,6 +154,11 @@ const chatList = ref<Chat[]>([
 
 const currentChat = computed(() => chatList.value.find(c => c.id === currentChatId.value))
 const messages = computed(() => currentChat.value?.messages || [])
+
+// 启动时检测连接状态
+onMounted(async () => {
+  isConnected.value = await daxiaAPI.healthCheck()
+})
 
 const quickCommands = [
   { name: 'weather', label: '天气', icon: '🌤️' },

@@ -53,5 +53,15 @@ export const daxiaAPI = {
   // 分析项目
   async analyzeProject(): Promise<CommandResponse> {
     return this.executeCommand('analyze')
+  },
+
+  // 健康检查
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/health`)
+      return response.status === 200
+    } catch {
+      return false
+    }
   }
 }
