@@ -82,6 +82,8 @@
               <span>🦐</span>
               <span class="font-medium">大虾</span>
             </div>
+            <!-- 二维码图片 -->
+            <img v-if="msg.qrCode" :src="msg.qrCode" alt="微信二维码" class="mb-4 rounded-lg" />
             <pre class="whitespace-pre-wrap text-sm font-sans">{{ msg.content }}</pre>
           </div>
         </div>
@@ -132,6 +134,7 @@ import { daxiaAPI } from './api/daxia'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  qrCode?: string
 }
 
 interface Chat {
@@ -247,10 +250,19 @@ async function executeCommand(command: string) {
     const chat = chatList.value.find(c => c.id === currentChatId.value)
     if (chat) {
       if (response.success) {
-        const content = typeof response.data === 'string' 
-          ? response.data 
-          : JSON.stringify(response.data, null, 2)
-        chat.messages.push({ role: 'assistant', content })
+        // 处理二维码
+        if (response.data?.qrCodeUrl) {
+          chat.messages.push({ 
+            role: 'assistant', 
+            content: '请使用微信扫描二维码登录',
+            qrCode: response.data.qrCodeUrl
+          })
+        } else {
+          const content = typeof response.data === 'string' 
+            ? response.data 
+            : JSON.stringify(response.data, null, 2)
+          chat.messages.push({ role: 'assistant', content })
+        }
         isConnected.value = true
       } else {
         chat.messages.push({ role: 'assistant', content: `❌ 错误: ${response.message}` })

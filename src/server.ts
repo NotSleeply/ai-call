@@ -50,8 +50,16 @@ app.post('/api/command', async (req: Request, res: Response) => {
         await assistant.generateSummary();
         break;
       case 'wx':
+        // 生成二维码图片（Web端用）
+        const qrCodeUrl = await assistant.generateQRCodeBase64();
         await assistant.connectWeChat();
-        break;
+        data = { qrCodeUrl, message: logs.join('\n') };
+        console.log = originalLog;
+        return res.json({
+          success: true,
+          message: '微信连接成功',
+          data
+        });
       case 'analyze':
         await assistant.analyzeProject();
         break;

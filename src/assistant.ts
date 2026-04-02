@@ -7,6 +7,7 @@ import {
 } from "fs";
 import { join, extname } from "path";
 import { execSync } from "child_process";
+import QRCode from "qrcode";
 
 /**
  * 大虾助手核心功能类
@@ -368,7 +369,7 @@ ${Object.entries(stats.fileTypes)
   /**
    * 连接微信
    */
-  async connectWeChat(): Promise<void> {
+  async connectWeChat(): Promise<{ qrCodeUrl: string } | void> {
     console.log("\n🔄 正在初始化微信连接...");
     await this.delay(500);
 
@@ -384,8 +385,17 @@ ${Object.entries(stats.fileTypes)
     console.log("╚═══════════════════════════════════════╝");
     console.log("\n");
 
-    // 生成一个漂亮的ASCII二维码
-    await this.displayQRCode();
+    // 使用 qrcode 库生成终端 ASCII 二维码（CLI 模式）
+    try {
+      const qrAscii = await QRCode.toString("https://weixin.qq.com/daxia-demo", {
+        type: "terminal",
+        small: true,
+      });
+      console.log(qrAscii);
+    } catch {
+      // 如果失败，使用备用 ASCII 二维码
+      await this.displayQRCode();
+    }
 
     console.log("\n");
     console.log("⏳ 等待扫码中...");
@@ -414,6 +424,25 @@ ${Object.entries(stats.fileTypes)
     console.log("   - 发送消息: wx send <好友> <内容>");
     console.log("   - 断开连接: wx disconnect");
     console.log("\n");
+  }
+
+  /**
+   * 生成二维码 Base64（用于 Web 端）
+   */
+  async generateQRCodeBase64(): Promise<string> {
+    try {
+      const qrCodeUrl = await QRCode.toDataURL("https://weixin.qq.com/daxia-demo", {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      });
+      return qrCodeUrl;
+    } catch (error) {
+      throw new Error("生成二维码失败");
+    }
   }
 
   /**
