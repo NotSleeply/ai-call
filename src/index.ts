@@ -97,6 +97,15 @@ class DaxiaDemo {
       case "wx":
         await this.assistant.connectWeChat();
         break;
+      case "weather":
+        await this.assistant.summarizeWeather();
+        break;
+      case "news":
+        await this.assistant.summarizeNews();
+        break;
+      case "email":
+        await this.assistant.summarizeEmail();
+        break;
       default:
         // 智能问答模式
         await this.assistant.smartChat(input);

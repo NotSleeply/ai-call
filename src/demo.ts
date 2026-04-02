@@ -71,6 +71,27 @@ async function demo() {
   await assistant.connectWeChat();
   await wait(1000);
 
+  // 演示9：天气总结
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示9: 总结天气");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.summarizeWeather();
+  await wait(1000);
+
+  // 演示10：新闻总结
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示10: 总结新闻");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.summarizeNews();
+  await wait(1000);
+
+  // 演示11：邮件总结
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示11: 总结邮件");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.summarizeEmail();
+  await wait(1000);
+
   // 结束
   console.log("\n═══════════════════════════════════════════════════════════");
   console.log("🎬 演示完成！");

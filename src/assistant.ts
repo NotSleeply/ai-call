@@ -30,6 +30,9 @@ export class DaxiaAssistant {
 │  list [目录]             列出目录内容                       │
 │  ask <问题>              智能问答                           │
 │  wx                      连接微信                           │
+│  weather                 总结天气                           │
+│  news                    总结新闻                           │
+│  email                   总结邮件                           │
 │  exit                    退出程序                           │
 ├─────────────────────────────────────────────────────────────┤
 │  💡 提示: 输入任意其他内容将进入智能问答模式               │
@@ -475,5 +478,221 @@ ${Object.entries(stats.fileTypes)
    */
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 总结天气
+   */
+  async summarizeWeather(): Promise<void> {
+    console.log("\n🌤️ 正在获取天气信息...");
+    await this.delay(800);
+
+    console.log("📡 正在分析天气数据...");
+    await this.delay(600);
+
+    console.log("\n");
+    console.log("╔═══════════════════════════════════════╗");
+    console.log("║         🌤️ 天气总结报告              ║");
+    console.log("╚═══════════════════════════════════════╝");
+    console.log("\n");
+
+    // 模拟天气数据
+    const weatherData = {
+      城市: "北京",
+      日期: new Date().toLocaleDateString("zh-CN"),
+      当前天气: "多云",
+      温度: "18°C",
+      最高温度: "22°C",
+      最低温度: "14°C",
+      湿度: "65%",
+      风向: "东南风 3级",
+      空气质量: "良 (AQI: 78)",
+      紫外线: "中等",
+      建议: [
+        "今日天气舒适，适合外出活动",
+        "早晚温差较大，注意添加衣物",
+        "紫外线中等，建议涂抹防晒霜",
+      ],
+    };
+
+    console.log("📍 地点: " + weatherData.城市);
+    console.log("📅 日期: " + weatherData.日期);
+    console.log("─".repeat(50));
+    console.log("");
+    console.log("🌤️  当前天气: " + weatherData.当前天气);
+    console.log("🌡️  当前温度: " + weatherData.温度);
+    console.log("📈 最高温度: " + weatherData.最高温度);
+    console.log("📉 最低温度: " + weatherData.最低温度);
+    console.log("💧 湿度: " + weatherData.湿度);
+    console.log("🌬️  风向: " + weatherData.风向);
+    console.log("🌿 空气质量: " + weatherData.空气质量);
+    console.log("☀️  紫外线: " + weatherData.紫外线);
+    console.log("");
+    console.log("─".repeat(50));
+    console.log("💡 今日建议:");
+    weatherData.建议.forEach((tip, idx) => {
+      console.log(`   ${idx + 1}. ${tip}`);
+    });
+    console.log("");
+
+    await this.delay(300);
+    console.log("✅ 天气总结完成！");
+  }
+
+  /**
+   * 总结新闻
+   */
+  async summarizeNews(): Promise<void> {
+    console.log("\n📰 正在获取新闻信息...");
+    await this.delay(800);
+
+    console.log("📡 正在分析新闻内容...");
+    await this.delay(600);
+
+    console.log("\n");
+    console.log("╔═══════════════════════════════════════╗");
+    console.log("║         📰 新闻总结报告              ║");
+    console.log("╚═══════════════════════════════════════╝");
+    console.log("\n");
+
+    // 模拟新闻数据
+    const newsData = {
+      更新时间: new Date().toLocaleString("zh-CN"),
+      头条新闻: [
+        {
+          标题: "科技突破：新型AI模型发布",
+          来源: "科技日报",
+          摘要:
+            "最新研发的AI模型在多个领域取得突破性进展，将推动产业升级。",
+          重要度: "⭐⭐⭐⭐⭐",
+        },
+        {
+          标题: "经济动态：市场持续回暖",
+          来源: "经济观察报",
+          摘要:
+            "近期市场数据显示经济指标稳步上升，投资者信心增强。",
+          重要度: "⭐⭐⭐⭐",
+        },
+        {
+          标题: "环保新规：绿色政策落地",
+          来源: "环保周刊",
+          摘要: "新环保政策正式实施，企业积极响应绿色发展号召。",
+          重要度: "⭐⭐⭐⭐",
+        },
+      ],
+      热点话题: ["人工智能", "新能源", "数字经济", "医疗健康"],
+    };
+
+    console.log("📅 更新时间: " + newsData.更新时间);
+    console.log("─".repeat(50));
+    console.log("");
+
+    console.log("📌 头条新闻:");
+    console.log("");
+    newsData.头条新闻.forEach((news, idx) => {
+      console.log(`【${idx + 1}】${news.标题} ${news.重要度}`);
+      console.log(`    来源: ${news.来源}`);
+      console.log(`    摘要: ${news.摘要}`);
+      console.log("");
+    });
+
+    console.log("─".repeat(50));
+    console.log("🔥 热点话题:");
+    console.log("   " + newsData.热点话题.join(" | "));
+    console.log("");
+
+    await this.delay(300);
+    console.log("✅ 新闻总结完成！");
+  }
+
+  /**
+   * 总结邮件
+   */
+  async summarizeEmail(): Promise<void> {
+    console.log("\n📧 正在获取邮件信息...");
+    await this.delay(800);
+
+    console.log("📡 正在分析邮件内容...");
+    await this.delay(600);
+
+    console.log("\n");
+    console.log("╔═══════════════════════════════════════╗");
+    console.log("║         📧 邮件总结报告              ║");
+    console.log("╚═══════════════════════════════════════╝");
+    console.log("\n");
+
+    // 模拟邮件数据
+    const emailData = {
+      用户邮箱: "user@example.com",
+      检查时间: new Date().toLocaleString("zh-CN"),
+      统计: {
+        未读邮件: 5,
+        重要邮件: 2,
+        工作邮件: 8,
+        订阅邮件: 15,
+      },
+      重要邮件列表: [
+        {
+          发件人: "张经理",
+          主题: "关于下周项目会议安排",
+          时间: "今天 10:30",
+          摘要: "定于下周一上午10点召开项目进度会议，请准备相关材料。",
+          标签: "工作 重要",
+        },
+        {
+          发件人: "人力资源部",
+          主题: "年度培训通知",
+          时间: "今天 09:15",
+          摘要: "公司将于下月开展技能培训，请在本周五前完成报名。",
+          标签: "重要",
+        },
+        {
+          发件人: "李同事",
+          主题: "需求文档更新",
+          时间: "昨天 16:45",
+          摘要: "已更新产品需求文档，请查收并提出修改意见。",
+          标签: "工作",
+        },
+      ],
+      待处理事项: [
+        "回复张经理的会议确认",
+        "完成培训报名",
+        "审阅需求文档并反馈",
+      ],
+    };
+
+    console.log("📬 邮箱: " + emailData.用户邮箱);
+    console.log("🕐 检查时间: " + emailData.检查时间);
+    console.log("─".repeat(50));
+    console.log("");
+
+    console.log("📊 邮件统计:");
+    console.log(`   📥 未读邮件: ${emailData.统计.未读邮件} 封`);
+    console.log(`   ⭐ 重要邮件: ${emailData.统计.重要邮件} 封`);
+    console.log(`   💼 工作邮件: ${emailData.统计.工作邮件} 封`);
+    console.log(`   📰 订阅邮件: ${emailData.统计.订阅邮件} 封`);
+    console.log("");
+
+    console.log("─".repeat(50));
+    console.log("📌 重要邮件:");
+    console.log("");
+    emailData.重要邮件列表.forEach((email, idx) => {
+      console.log(`【${idx + 1}】${email.主题}`);
+      console.log(`    发件人: ${email.发件人}`);
+      console.log(`    时间: ${email.时间}`);
+      console.log(`    摘要: ${email.摘要}`);
+      console.log(`    标签: ${email.标签}`);
+      console.log("");
+    });
+
+    console.log("─".repeat(50));
+    console.log("✅ 待处理事项:");
+    emailData.待处理事项.forEach((task, idx) => {
+      console.log(`   ${idx + 1}. ${task}`);
+    });
+    console.log("");
+
+    await this.delay(300);
+    console.log("✅ 邮件总结完成！");
   }
 }
