@@ -790,7 +790,7 @@ SmallClaw/
 
 ## 💡 关键亮点
 
-1. **完整的命令系统**: 13个核心命令，覆盖主要功能场景
+1. **完整的命令系统**: 14个核心命令，覆盖主要功能场景
 2. **友好的用户界面**: 使用emoji、表格、动画效果美化输出
 3. **模拟真实场景**: 提供真实的数据展示和交互流程
 4. **详细的文档说明**: README包含完整的使用指南和示例
@@ -802,8 +802,8 @@ SmallClaw/
 
 | 类别 | 数量 | 说明 |
 |------|------|------|
-| 核心命令 | 13 | 涵盖文件、分析、连接、总结等功能 |
-| 演示场景 | 7 | 包含完整的使用示例 |
+| 核心命令 | 14 | 涵盖文件、分析、连接、总结等功能 |
+| 演示场景 | 8 | 包含完整的使用示例 |
 | 代码文件 | 3 | index.ts, assistant.ts, demo.ts |
 | 文档页面 | 1 | README.md |
 
@@ -855,17 +855,40 @@ SmallClaw/
 *感谢使用大虾AI助手！*
 `;
 
-    // 模拟打字效果输出
+    // 在屏幕上显示部分内容
     const lines = markdown.split("\n");
-    for (const line of lines) {
+    const previewLines = lines.slice(0, 30); // 显示前30行预览
+    
+    for (const line of previewLines) {
       console.log(line);
-      await this.delay(30); // 每行延迟30ms，模拟打字效果
+      await this.delay(20);
     }
 
     console.log("\n");
-    console.log("─".repeat(60));
-    console.log("✅ Markdown总结已生成！");
-    console.log("💡 提示: 可以将上述内容保存为 .md 文件");
+    console.log("... 内容省略 ...");
     console.log("");
+
+    // 生成文件名（带时间戳）
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const filename = `conversation-summary-${timestamp}.md`;
+
+    console.log("─".repeat(60));
+    console.log("💾 正在保存文件...");
+
+    try {
+      // 写入文件
+      writeFileSync(filename, markdown, "utf-8");
+      
+      console.log(`✅ 文件已成功保存: ${filename}`);
+      console.log(`📄 文件大小: ${Buffer.byteLength(markdown, "utf-8")} 字节`);
+      console.log(`📍 保存路径: ${process.cwd()}\\${filename}`);
+      console.log("");
+      console.log("💡 提示: 可以使用任何 Markdown 编辑器打开查看完整内容");
+      console.log("");
+    } catch (error) {
+      console.log(`❌ 文件保存失败: ${error}`);
+      console.log("💡 尝试将内容输出到屏幕...");
+      console.log("\n" + markdown);
+    }
   }
 }
