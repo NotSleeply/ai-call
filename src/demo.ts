@@ -64,11 +64,18 @@ async function demo() {
   await assistant.smartChat("谢谢");
   await wait(1000);
 
+  // 演示8：微信连接
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示8: 连接微信");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.connectWeChat();
+  await wait(1000);
+
   // 结束
   console.log("\n═══════════════════════════════════════════════════════════");
   console.log("🎬 演示完成！");
   console.log("═══════════════════════════════════════════════════════════");
-  console.log('\n💡 提示: 运行 "npm start" 进入交互模式，亲自体验所有功能！\n');
+  console.log('\n💡 提示: 运行 "pnpm start" 进入交互模式，亲自体验所有功能！\n');
 }
 
 demo().catch(console.error);

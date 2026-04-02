@@ -94,6 +94,9 @@ class DaxiaDemo {
       case "list":
         await this.assistant.listFiles(args[0] || ".");
         break;
+      case "wx":
+        await this.assistant.connectWeChat();
+        break;
       default:
         // 智能问答模式
         await this.assistant.smartChat(input);

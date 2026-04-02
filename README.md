@@ -59,6 +59,7 @@ pnpm start
 | `analyze` | 分析项目 | `analyze` |
 | `list [目录]` | 列出目录 | `list src` |
 | `ask <问题>` | 智能问答 | `ask 什么是TypeScript?` |
+| `wx` | 连接微信 | `wx` |
 | `exit` | 退出程序 | `exit` |
 
 ## 演示场景
@@ -98,6 +99,11 @@ pnpm start
 ```
 > exec dir
 > exec echo Hello World
+```
+
+### 场景6：微信连接
+```
+> wx
 ```
 
 ## 项目结构

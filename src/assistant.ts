@@ -29,6 +29,7 @@ export class DaxiaAssistant {
 │  analyze                 分析当前项目结构                    │
 │  list [目录]             列出目录内容                       │
 │  ask <问题>              智能问答                           │
+│  wx                      连接微信                           │
 │  exit                    退出程序                           │
 ├─────────────────────────────────────────────────────────────┤
 │  💡 提示: 输入任意其他内容将进入智能问答模式               │
@@ -358,5 +359,121 @@ ${Object.entries(stats.fileTypes)
       console.log("   在完整版大虾中，我会提供更详细的回答。");
       console.log("   输入 help 查看可用命令，或输入 ask + 问题进行提问。");
     }
+  }
+
+  /**
+   * 连接微信
+   */
+  async connectWeChat(): Promise<void> {
+    console.log("\n🔄 正在初始化微信连接...");
+    await this.delay(500);
+
+    console.log("📡 正在生成二维码...");
+    await this.delay(800);
+
+    // 显示模拟二维码
+    console.log("\n");
+    console.log("╔═══════════════════════════════════════╗");
+    console.log("║                                       ║");
+    console.log("║   请使用微信扫描下方二维码登录         ║");
+    console.log("║                                       ║");
+    console.log("╚═══════════════════════════════════════╝");
+    console.log("\n");
+
+    // 生成一个漂亮的ASCII二维码
+    await this.displayQRCode();
+
+    console.log("\n");
+    console.log("⏳ 等待扫码中...");
+    await this.delay(2000);
+
+    // 模拟扫描过程
+    console.log("📱 检测到扫码动作...");
+    await this.delay(1000);
+
+    console.log("✅ 扫码成功！");
+    await this.delay(500);
+
+    console.log("🔐 正在验证身份...");
+    await this.delay(800);
+
+    console.log("✅ 身份验证通过！");
+    await this.delay(300);
+
+    console.log("\n");
+    console.log("╔═══════════════════════════════════════╗");
+    console.log("║        🎉 微信连接成功！              ║");
+    console.log("╚═══════════════════════════════════════╝");
+    console.log("\n");
+    console.log("💡 提示: 现在可以使用微信相关功能了！");
+    console.log("   - 查看消息: wx messages");
+    console.log("   - 发送消息: wx send <好友> <内容>");
+    console.log("   - 断开连接: wx disconnect");
+    console.log("\n");
+  }
+
+  /**
+   * 显示ASCII二维码
+   */
+  private async displayQRCode(): Promise<void> {
+    // 生成一个模拟的二维码图案
+    const qrSize = 21;
+    const qrCode: string[][] = [];
+
+    // 初始化二维码矩阵
+    for (let i = 0; i < qrSize; i++) {
+      qrCode[i] = [];
+      for (let j = 0; j < qrSize; j++) {
+        qrCode[i][j] = "  ";
+      }
+    }
+
+    // 生成定位图案（三个角的方块）
+    this.drawFinderPattern(qrCode, 0, 0);
+    this.drawFinderPattern(qrCode, qrSize - 7, 0);
+    this.drawFinderPattern(qrCode, 0, qrSize - 7);
+
+    // 生成随机数据区域
+    for (let i = 0; i < qrSize; i++) {
+      for (let j = 0; j < qrSize; j++) {
+        if (qrCode[i][j] === "  ") {
+          qrCode[i][j] = Math.random() > 0.5 ? "██" : "  ";
+        }
+      }
+    }
+
+    // 逐行打印二维码
+    for (let i = 0; i < qrSize; i++) {
+      const row = qrCode[i].join("");
+      // 居中显示
+      const padding = " ".repeat(10);
+      console.log(padding + "║ " + row + " ║");
+    }
+  }
+
+  /**
+   * 绘制定位图案
+   */
+  private drawFinderPattern(qrCode: string[][], startX: number, startY: number): void {
+    // 外框
+    for (let i = 0; i < 7; i++) {
+      qrCode[startY][startX + i] = "██";
+      qrCode[startY + 6][startX + i] = "██";
+      qrCode[startY + i][startX] = "██";
+      qrCode[startY + i][startX + 6] = "██";
+    }
+    // 内框
+    for (let i = 2; i < 5; i++) {
+      for (let j = 2; j < 5; j++) {
+        qrCode[startY + i][startX + j] = "██";
+      }
+    }
+  }
+
+  /**
+   * 延迟函数
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
