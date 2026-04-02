@@ -4,35 +4,10 @@
 
 ## 🎯 两种交互模式
 
-本Demo提供**两种交互模式**，实现相同的功能效果：
-
-### 1️⃣ CLI 命令行模式
-
-```bash
-pnpm start
-```
-
-- 💻 纯命令行交互（REPL）
-- ⌨️ 键盘输入命令
-- 🖥️ 终端输出结果
-- 🔧 适合开发者和命令行爱好者
-
-### 2️⃣ Web 可视化模式
-
-```bash
-# 终端1：启动后端服务
-pnpm run server
-
-# 终端2：启动前端界面
-cd frontend && pnpm run dev
-```
-
-访问 http://localhost:3000
-
-- 🎨 现代化 Web 界面
-- 🖱️ 点击快捷按钮执行命令
-- 📱 响应式设计，支持移动端
-- ✨ 适合演示和普通用户
+| 模式 | 启动方式 | 特点 | 适用场景 |
+|------|----------|------|----------|
+| **CLI** | `pnpm start` | 命令行交互（REPL）、键盘输入 | 开发者、命令行爱好者 |
+| **Web** | `pnpm run server` + `cd frontend && pnpm run dev` | 可视化界面、点击按钮操作 | 演示、普通用户 |
 
 > 💡 **两种模式底层调用相同的核心功能模块**，展示效果一致，可根据场景自由选择！
 
@@ -98,37 +73,27 @@ cd frontend && pnpm run dev
 ### 安装依赖
 
 ```bash
-# 安装后端依赖
-pnpm install
-
-# 编译后端代码
-pnpm run build
-
-# 安装前端依赖（仅Web模式需要）
-cd frontend && pnpm install && cd ..
+pnpm install && pnpm run build
+cd frontend && pnpm install && cd ..   # 仅Web模式需要
 ```
 
-### 方式一：CLI 模式
+### CLI 模式
 
 ```bash
 pnpm start
 ```
 
-启动后直接在命令行输入命令即可交互。
-
-### 方式二：Web 模式
-
-需要开启两个终端：
+### Web 模式
 
 ```bash
-# 终端1：启动后端API服务（端口3001）
-pnpm run server
+# 终端1
+pnpm run server    # 后端API，端口3001
 
-# 终端2：启动前端开发服务器（端口3000）
-cd frontend && pnpm run dev
+# 终端2
+cd frontend && pnpm run dev    # 前端，端口3000
 ```
 
-然后访问 http://localhost:3000 即可使用可视化界面。
+访问 http://localhost:3000
 
 ## 可用命令
 
@@ -400,11 +365,9 @@ SmallClaw/
 
 ## 技术栈
 
-- **Node.js** - 运行环境
-- **TypeScript** - 开发语言
-- **pnpm** - 包管理器
-- **fs** - 文件系统操作
-- **child_process** - 命令执行
+**后端**: Node.js + TypeScript + Express + pnpm
+
+**前端**: Vue3 + TypeScript + Tailwind CSS + Axios + Vite
 
 ## 注意事项
 
