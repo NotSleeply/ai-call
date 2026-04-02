@@ -2,6 +2,40 @@
 
 这是一个演示大虾（AI编程助手）核心功能的Demo项目。
 
+## 🎯 两种交互模式
+
+本Demo提供**两种交互模式**，实现相同的功能效果：
+
+### 1️⃣ CLI 命令行模式
+
+```bash
+pnpm start
+```
+
+- 💻 纯命令行交互（REPL）
+- ⌨️ 键盘输入命令
+- 🖥️ 终端输出结果
+- 🔧 适合开发者和命令行爱好者
+
+### 2️⃣ Web 可视化模式
+
+```bash
+# 终端1：启动后端服务
+pnpm run server
+
+# 终端2：启动前端界面
+cd frontend && pnpm run dev
+```
+
+访问 http://localhost:3000
+
+- 🎨 现代化 Web 界面
+- 🖱️ 点击快捷按钮执行命令
+- 📱 响应式设计，支持移动端
+- ✨ 适合演示和普通用户
+
+> 💡 **两种模式底层调用相同的核心功能模块**，展示效果一致，可根据场景自由选择！
+
 ## 功能特性
 
 本Demo演示了大虾的核心能力：
@@ -64,20 +98,37 @@
 ### 安装依赖
 
 ```bash
+# 安装后端依赖
 pnpm install
-```
 
-### 编译项目
-
-```bash
+# 编译后端代码
 pnpm run build
+
+# 安装前端依赖（仅Web模式需要）
+cd frontend && pnpm install && cd ..
 ```
 
-### 运行Demo
+### 方式一：CLI 模式
 
 ```bash
 pnpm start
 ```
+
+启动后直接在命令行输入命令即可交互。
+
+### 方式二：Web 模式
+
+需要开启两个终端：
+
+```bash
+# 终端1：启动后端API服务（端口3001）
+pnpm run server
+
+# 终端2：启动前端开发服务器（端口3000）
+cd frontend && pnpm run dev
+```
+
+然后访问 http://localhost:3000 即可使用可视化界面。
 
 ## 可用命令
 
@@ -329,10 +380,19 @@ pnpm start
 
 ```
 SmallClaw/
-├── src/
-│   ├── index.ts       # 主入口，REPL交互
-│   └── assistant.ts   # 大虾助手核心功能
-├── dist/              # 编译输出目录
+├── src/                   # 后端源码
+│   ├── index.ts          # CLI主入口，REPL交互
+│   ├── assistant.ts      # 大虾助手核心功能
+│   ├── demo.ts           # 自动演示脚本
+│   └── server.ts         # API服务器
+├── frontend/             # 前端项目
+│   ├── src/
+│   │   ├── api/          # API服务封装
+│   │   ├── App.vue       # 主应用组件
+│   │   └── main.ts       # 入口文件
+│   ├── package.json
+│   └── README.md         # 前端文档
+├── dist/                 # 后端编译输出
 ├── package.json
 ├── tsconfig.json
 └── README.md
