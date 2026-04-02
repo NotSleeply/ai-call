@@ -92,6 +92,13 @@ async function demo() {
   await assistant.summarizeEmail();
   await wait(1000);
 
+  // 演示12：生成对话总结
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示12: 生成对话总结");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.generateSummary();
+  await wait(1000);
+
   // 结束
   console.log("\n═══════════════════════════════════════════════════════════");
   console.log("🎬 演示完成！");

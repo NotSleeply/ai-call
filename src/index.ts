@@ -106,6 +106,9 @@ class DaxiaDemo {
       case "email":
         await this.assistant.summarizeEmail();
         break;
+      case "summary":
+        await this.assistant.generateSummary();
+        break;
       default:
         // 智能问答模式
         await this.assistant.smartChat(input);
