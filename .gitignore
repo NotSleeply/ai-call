@@ -16,3 +16,4 @@ coverage/
 *.swo
 *.zip
 *.tar.gz      
+out/
