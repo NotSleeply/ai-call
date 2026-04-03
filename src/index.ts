@@ -16,7 +16,7 @@ import { Database } from "./database.js";
 class DaxiaDemo {
   private assistant: DaxiaAssistant;
   private rl: ReturnType<typeof createInterface>;
-  private db: Database;
+  private db: ReturnType<(typeof Database)["getInstance"]>;
   private currentConversationId: number | null = null;
 
   constructor() {
@@ -52,12 +52,16 @@ class DaxiaDemo {
    */
   private async loadOrCreateConversation(): Promise<void> {
     const conversations = this.db.getConversations();
-    
+
     if (conversations.length > 0) {
       // 使用最近的对话
       this.currentConversationId = conversations[0].id;
-      console.log(`📝 已加载对话: ${conversations[0].title} (ID: ${conversations[0].id})`);
-      console.log(`💬 历史消息: ${this.db.getMessages(this.currentConversationId).length} 条`);
+      console.log(
+        `📝 已加载对话: ${conversations[0].title} (ID: ${conversations[0].id})`,
+      );
+      console.log(
+        `💬 历史消息: ${this.db.getMessages(this.currentConversationId).length} 条`,
+      );
       console.log("");
     } else {
       // 创建新对话
@@ -88,22 +92,37 @@ class DaxiaDemo {
   /**
    * 捕获 console.log 输出
    */
-  private captureOutput(fn: () => Promise<void>): Promise<string> {
-    return new Promise((resolve) => {
-      const logs: string[] = [];
-      const originalLog = console.log;
-      
-      console.log = (...args: any[]) => {
-        logs.push(args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' '));
-      };
+  private async captureOutput(fn: () => Promise<void>): Promise<string> {
+    const chunks: string[] = [];
+    const originalWrite = process.stdout.write.bind(process.stdout);
 
-      fn().then(() => {
-        console.log = originalLog;
-        resolve(logs.join('\n'));
-      });
-    });
+    process.stdout.write = ((
+      chunk: string | Uint8Array,
+      encoding?: BufferEncoding | ((error?: Error | null) => void),
+      callback?: (error?: Error | null) => void,
+    ): boolean => {
+      const text =
+        typeof chunk === "string"
+          ? chunk
+          : Buffer.from(chunk).toString(
+              typeof encoding === "string" ? encoding : undefined,
+            );
+
+      chunks.push(text);
+
+      if (typeof encoding === "function") {
+        return originalWrite(chunk, encoding);
+      }
+
+      return originalWrite(chunk, encoding, callback);
+    }) as typeof process.stdout.write;
+
+    try {
+      await fn();
+      return chunks.join("").trimEnd();
+    } finally {
+      process.stdout.write = originalWrite as typeof process.stdout.write;
+    }
   }
 
   private async repl(): Promise<void> {
@@ -128,6 +147,9 @@ class DaxiaDemo {
 
         await this.handleCommand(trimmed);
       } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ERR_USE_AFTER_CLOSE") {
+          break;
+        }
         console.error("❌ 发生错误:", error);
       }
     }
@@ -243,7 +265,8 @@ class DaxiaDemo {
     if (this.currentConversationId) {
       const messages = this.db.getMessages(this.currentConversationId);
       if (messages.length <= 2) {
-        const title = input.length > 30 ? input.substring(0, 30) + "..." : input;
+        const title =
+          input.length > 30 ? input.substring(0, 30) + "..." : input;
         this.db.updateConversationTitle(this.currentConversationId, title);
       }
     }
@@ -259,7 +282,7 @@ class DaxiaDemo {
     }
 
     const messages = this.db.getMessages(this.currentConversationId);
-    
+
     if (messages.length === 0) {
       console.log("📭 暂无对话历史");
       return;
@@ -267,7 +290,7 @@ class DaxiaDemo {
 
     console.log("\n📜 对话历史:");
     console.log("─".repeat(50));
-    
+
     for (const msg of messages) {
       const prefix = msg.role === "user" ? "👤 你" : "🦐 大虾";
       const time = new Date(msg.timestamp).toLocaleTimeString();
@@ -275,7 +298,7 @@ class DaxiaDemo {
       console.log(msg.content);
       console.log("");
     }
-    
+
     console.log("─".repeat(50));
   }
 

@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import BetterSqlite3 from "better-sqlite3";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, mkdirSync } from "fs";
@@ -13,7 +13,32 @@ if (!existsSync(dataDir)) {
 }
 
 const dbPath = join(dataDir, "daxia.db");
-const db = new Database(dbPath);
+
+const createDatabase = (filePath: string): BetterSqlite3.Database => {
+  try {
+    return new BetterSqlite3(filePath);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Could not locate the bindings file")
+    ) {
+      const helpMessage = [
+        "better-sqlite3 原生绑定未找到，数据库无法启动。",
+        "请在项目根目录执行以下命令后重试：",
+        "1) pnpm install",
+        "2) pnpm rebuild better-sqlite3",
+        "如果仍失败，请确认 package.json 包含:",
+        '"pnpm": { "onlyBuiltDependencies": ["better-sqlite3"] }',
+      ].join("\n");
+
+      throw new Error(helpMessage, { cause: error });
+    }
+
+    throw error;
+  }
+};
+
+const db: BetterSqlite3.Database = createDatabase(dbPath);
 
 // 初始化数据库表
 db.exec(`
@@ -89,9 +114,7 @@ export const ConversationModel = {
     return stmts.getConversation.get(id) as any;
   },
 
-  list(
-    limit: number = 20,
-  ): Array<{
+  list(limit: number = 20): Array<{
     id: number;
     title: string;
     created_at: string;
@@ -138,9 +161,7 @@ export const MessageModel = {
     return MessageModel.getById(result.lastInsertRowid as number)!;
   },
 
-  getById(
-    id: number,
-  ):
+  getById(id: number):
     | {
         id: number;
         conversation_id: number;
@@ -153,9 +174,7 @@ export const MessageModel = {
     return db.prepare("SELECT * FROM messages WHERE id = ?").get(id) as any;
   },
 
-  getByConversation(
-    conversationId: number,
-  ): Array<{
+  getByConversation(conversationId: number): Array<{
     id: number;
     conversation_id: number;
     role: string;
@@ -168,6 +187,58 @@ export const MessageModel = {
 
   clear(conversationId: number): void {
     stmts.clearMessages.run(conversationId);
+  },
+};
+
+// 兼容旧版 CLI 调用方式（Database.getInstance）
+class AppDatabase {
+  getConversations(): Array<{
+    id: number;
+    title: string;
+    created_at: string;
+    updated_at: string;
+  }> {
+    return ConversationModel.list();
+  }
+
+  createConversation(title: string): number {
+    return ConversationModel.create(title).id;
+  }
+
+  updateConversationTitle(id: number, title: string): void {
+    ConversationModel.updateTitle(id, title);
+  }
+
+  getMessages(conversationId: number): Array<{
+    id: number;
+    conversation_id: number;
+    role: string;
+    content: string;
+    qr_code?: string;
+    created_at: string;
+    timestamp: string;
+  }> {
+    return MessageModel.getByConversation(conversationId).map((msg) => ({
+      ...msg,
+      timestamp: msg.created_at,
+    }));
+  }
+
+  addMessage(
+    conversationId: number,
+    role: "user" | "assistant",
+    content: string,
+    qrCode?: string,
+  ): void {
+    MessageModel.add(conversationId, role, content, qrCode);
+  }
+}
+
+const databaseInstance = new AppDatabase();
+
+export const Database = {
+  getInstance(): AppDatabase {
+    return databaseInstance;
   },
 };
 
