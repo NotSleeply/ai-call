@@ -511,6 +511,37 @@ ${Object.entries(stats.fileTypes)
   }
 
   /**
+   * 旋转加载动画（随机 1-20 秒）
+   */
+  private async showLoadingSpinner(action: string = "思考中"): Promise<void> {
+    const minSeconds = 1;
+    const maxSeconds = 20;
+    const duration = (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
+    
+    const spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    const startTime = Date.now();
+    let i = 0;
+    
+    return new Promise((resolve) => {
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
+        
+        // 清除当前行并显示旋转动画
+        process.stdout.write(`\r${spinner[i]} ${action}... ${remaining}s`);
+        
+        i = (i + 1) % spinner.length;
+        
+        if (elapsed >= duration) {
+          clearInterval(interval);
+          process.stdout.write("\r" + " ".repeat(50) + "\r"); // 清除动画
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  /**
    * 总结天气
    */
   async summarizeWeather(): Promise<void> {

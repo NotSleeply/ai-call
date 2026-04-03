@@ -48,6 +48,36 @@ class DaxiaDemo {
   }
 
   /**
+   * 旋转加载动画（随机 1-20 秒）
+   */
+  private async showLoadingSpinner(action: string = "思考中"): Promise<void> {
+    const minSeconds = 1;
+    const maxSeconds = 20;
+    const duration = (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
+    
+    const spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    const startTime = Date.now();
+    let i = 0;
+    
+    return new Promise((resolve) => {
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        
+        // 清除当前行并显示旋转动画
+        process.stdout.write(`\r${spinner[i]} ${action}...`);
+        
+        i = (i + 1) % spinner.length;
+        
+        if (elapsed >= duration) {
+          clearInterval(interval);
+          process.stdout.write("\r" + " ".repeat(50) + "\r"); // 清除动画
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  /**
    * 加载或创建对话
    */
   private async loadOrCreateConversation(): Promise<void> {
@@ -158,7 +188,7 @@ class DaxiaDemo {
   private async handleCommand(input: string): Promise<void> {
     const [cmd, ...args] = input.split(/\s+/);
 
-    // 特殊命令处理
+    // 特殊命令处理（不需要加载动画）
     if (cmd.toLowerCase() === "history") {
       this.showHistory();
       return;
@@ -171,6 +201,28 @@ class DaxiaDemo {
 
     // 保存用户消息
     this.saveUserMessage(input);
+
+    // 根据命令类型显示不同的加载提示
+    const loadingMessages: Record<string, string> = {
+      help: "加载帮助信息",
+      read: "读取文件",
+      write: "写入文件",
+      search: "搜索内容",
+      exec: "执行命令",
+      analyze: "分析项目",
+      ask: "思考问题",
+      list: "列出目录",
+      wx: "连接微信",
+      weather: "获取天气",
+      news: "获取新闻",
+      email: "获取邮件",
+      summary: "生成总结",
+    };
+
+    const loadingText = loadingMessages[cmd.toLowerCase()] || "思考中";
+
+    // 显示加载动画
+    await this.showLoadingSpinner(loadingText);
 
     let output = "";
 
