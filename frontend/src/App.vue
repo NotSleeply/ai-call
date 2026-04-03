@@ -98,10 +98,16 @@
 
         <!-- 加载中 -->
         <div v-if="loading" class="flex justify-start">
-          <div class="bg-gray-100 rounded-lg p-4">
-            <div class="flex items-center space-x-3 text-gray-500">
-              <div class="text-xl font-mono">{{ loadingSpinner }}</div>
-              <span class="text-sm">{{ loadingText }}</span>
+          <div class="loading-bubble rounded-lg p-4 shadow-sm border border-slate-200">
+            <div class="flex items-start space-x-3 text-gray-600">
+              <div class="loading-ring mt-0.5"></div>
+              <div class="min-w-[240px]">
+                <div class="text-sm font-medium text-slate-700">{{ loadingText }}</div>
+                <div class="text-xs text-slate-500 mt-1">{{ loadingPhase }}</div>
+                <div class="loading-dots mt-2" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -138,30 +144,40 @@ import { daxiaAPI, type Conversation, type Message } from './api/daxia'
 const isConnected = ref(false)
 const loading = ref(false)
 const loadingText = ref('')
-const loadingSpinner = ref('⠋')
+const loadingPhase = ref('')
 const inputText = ref('')
 const currentChatId = ref(1)
 const messageListRef = ref<HTMLElement | null>(null)
 
-// 旋转动画符号
-const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-let spinnerInterval: number | null = null
+const loadingPhases = [
+  '正在与助手同步上下文...',
+  '正在组织回复内容...',
+  '正在润色输出格式...',
+]
+let loadingPhaseTimer: number | null = null
 
-// 开始旋转动画
-function startSpinner() {
-  let i = 0
-  spinnerInterval = window.setInterval(() => {
-    loadingSpinner.value = spinnerFrames[i % spinnerFrames.length]
-    i++
-  }, 100)
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// 停止旋转动画
-function stopSpinner() {
-  if (spinnerInterval) {
-    clearInterval(spinnerInterval)
-    spinnerInterval = null
+function startLoadingState(baseText: string) {
+  loading.value = true
+  loadingText.value = baseText
+  loadingPhase.value = loadingPhases[0]
+
+  let phaseIndex = 0
+  loadingPhaseTimer = window.setInterval(() => {
+    phaseIndex = (phaseIndex + 1) % loadingPhases.length
+    loadingPhase.value = loadingPhases[phaseIndex]
+  }, 1200)
+}
+
+function stopLoadingState() {
+  if (loadingPhaseTimer) {
+    clearInterval(loadingPhaseTimer)
+    loadingPhaseTimer = null
   }
+  loading.value = false
 }
 
 const chatList = ref<Conversation[]>([])
@@ -302,14 +318,12 @@ async function sendQuickCommand(command: string) {
 }
 
 async function executeCommand(command: string) {
-  loading.value = true
-  startSpinner()
   const cmd = command.split(' ')[0]
   const config = commandConfig[cmd] || { loading: '执行中...' }
-  loadingText.value = config.loading
+  startLoadingState(config.loading)
 
   const startTime = Date.now()
-  const minDuration = 1000 + Math.random() * 3000 // 1-4秒随机等待
+  const minDuration = 2600 + Math.random() * 3200 // 2.6-5.8秒随机等待
 
   try {
     await daxiaAPI.executeCommand(command, currentChatId.value)
@@ -320,21 +334,18 @@ async function executeCommand(command: string) {
     // 确保至少显示最小等待时间
     const elapsed = Date.now() - startTime
     if (elapsed < minDuration) {
-      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+      await wait(minDuration - elapsed)
     }
-    stopSpinner()
-    loading.value = false
+    stopLoadingState()
     scrollToBottom()
   }
 }
 
 async function handleChat(text: string) {
-  loading.value = true
-  startSpinner()
-  loadingText.value = '思考中...'
+  startLoadingState('思考中...')
 
   const startTime = Date.now()
-  const minDuration = 1000 + Math.random() * 3000 // 1-4秒随机等待
+  const minDuration = 2200 + Math.random() * 2800 // 2.2-5秒随机等待
 
   try {
     await daxiaAPI.executeCommand(text, currentChatId.value)
@@ -344,10 +355,9 @@ async function handleChat(text: string) {
     // 确保至少显示最小等待时间
     const elapsed = Date.now() - startTime
     if (elapsed < minDuration) {
-      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+      await wait(minDuration - elapsed)
     }
-    stopSpinner()
-    loading.value = false
+    stopLoadingState()
     scrollToBottom()
   }
 }
@@ -361,4 +371,75 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.loading-bubble {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.loading-bubble::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.5) 45%, transparent 70%);
+  transform: translateX(-120%);
+  animation: bubble-sheen 2.2s ease-in-out infinite;
+}
+
+.loading-ring {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 2px solid #bfdbfe;
+  border-top-color: #2563eb;
+  animation: ring-spin 0.9s linear infinite;
+}
+
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #2563eb;
+  animation: dot-bounce 1.1s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dot-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+
+  40% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@keyframes bubble-sheen {
+  100% {
+    transform: translateX(120%);
+  }
+}
 </style>
