@@ -99,12 +99,8 @@
         <!-- 加载中 -->
         <div v-if="loading" class="flex justify-start">
           <div class="bg-gray-100 rounded-lg p-4">
-            <div class="flex items-center space-x-2 text-gray-500">
-              <div class="flex space-x-1">
-                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-              </div>
+            <div class="flex items-center space-x-3 text-gray-500">
+              <div class="text-xl font-mono">{{ loadingSpinner }}</div>
               <span class="text-sm">{{ loadingText }}</span>
             </div>
           </div>
@@ -142,9 +138,31 @@ import { daxiaAPI, type Conversation, type Message } from './api/daxia'
 const isConnected = ref(false)
 const loading = ref(false)
 const loadingText = ref('')
+const loadingSpinner = ref('⠋')
 const inputText = ref('')
 const currentChatId = ref(1)
 const messageListRef = ref<HTMLElement | null>(null)
+
+// 旋转动画符号
+const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+let spinnerInterval: number | null = null
+
+// 开始旋转动画
+function startSpinner() {
+  let i = 0
+  spinnerInterval = window.setInterval(() => {
+    loadingSpinner.value = spinnerFrames[i % spinnerFrames.length]
+    i++
+  }, 100)
+}
+
+// 停止旋转动画
+function stopSpinner() {
+  if (spinnerInterval) {
+    clearInterval(spinnerInterval)
+    spinnerInterval = null
+  }
+}
 
 const chatList = ref<Conversation[]>([])
 const messages = ref<Message[]>([])
@@ -157,6 +175,7 @@ const quickCommands = [
   { name: 'email', label: '邮件', icon: '📧' },
   { name: 'wx', label: '微信', icon: '💬' },
   { name: 'summary', label: '总结', icon: '📝' },
+  { name: '2048', label: '2048', icon: '🎮' },
   { name: 'help', label: '帮助', icon: '❓' },
 ]
 
@@ -168,6 +187,7 @@ const commandConfig: Record<string, { loading: string }> = {
   wx: { loading: '正在连接微信...' },
   analyze: { loading: '正在分析项目...' },
   help: { loading: '获取帮助信息...' },
+  '2048': { loading: '正在生成2048游戏...' },
 }
 
 // 格式化时间
@@ -262,7 +282,7 @@ async function sendMessage() {
   inputText.value = ''
   
   // 判断是否是命令
-  const isCommand = ['weather', 'news', 'email', 'summary', 'wx', 'analyze', 'help', 'read', 'write', 'list', 'search', 'exec'].includes(text.split(' ')[0])
+  const isCommand = ['weather', 'news', 'email', 'summary', 'wx', 'analyze', 'help', 'read', 'write', 'list', 'search', 'exec', '2048'].includes(text.split(' ')[0])
   
   if (isCommand) {
     await executeCommand(text)
@@ -283,9 +303,13 @@ async function sendQuickCommand(command: string) {
 
 async function executeCommand(command: string) {
   loading.value = true
+  startSpinner()
   const cmd = command.split(' ')[0]
   const config = commandConfig[cmd] || { loading: '执行中...' }
   loadingText.value = config.loading
+
+  const startTime = Date.now()
+  const minDuration = 1000 + Math.random() * 3000 // 1-4秒随机等待
 
   try {
     await daxiaAPI.executeCommand(command, currentChatId.value)
@@ -293,6 +317,12 @@ async function executeCommand(command: string) {
   } catch (error: any) {
     console.error('执行命令失败:', error)
   } finally {
+    // 确保至少显示最小等待时间
+    const elapsed = Date.now() - startTime
+    if (elapsed < minDuration) {
+      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+    }
+    stopSpinner()
     loading.value = false
     scrollToBottom()
   }
@@ -300,13 +330,23 @@ async function executeCommand(command: string) {
 
 async function handleChat(text: string) {
   loading.value = true
+  startSpinner()
   loadingText.value = '思考中...'
+
+  const startTime = Date.now()
+  const minDuration = 1000 + Math.random() * 3000 // 1-4秒随机等待
 
   try {
     await daxiaAPI.executeCommand(text, currentChatId.value)
   } catch (error: any) {
     console.error('对话失败:', error)
   } finally {
+    // 确保至少显示最小等待时间
+    const elapsed = Date.now() - startTime
+    if (elapsed < minDuration) {
+      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+    }
+    stopSpinner()
     loading.value = false
     scrollToBottom()
   }

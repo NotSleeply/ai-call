@@ -4,6 +4,8 @@ import {
   existsSync,
   readdirSync,
   statSync,
+  mkdirSync,
+  cpSync,
 } from "fs";
 import { join, extname } from "path";
 import { execSync } from "child_process";
@@ -35,6 +37,7 @@ export class DaxiaAssistant {
 │  news                    总结新闻                           │
 │  email                   总结邮件                           │
 │  summary                 生成对话总结（Markdown格式）       │
+│  2048                    生成2048游戏到out目录               │
 │  exit                    退出程序                           │
 ├─────────────────────────────────────────────────────────────┤
 │  💡 提示: 输入任意其他内容将进入智能问答模式               │
@@ -949,6 +952,47 @@ SmallClaw/
       console.log(`❌ 文件保存失败: ${error}`);
       console.log("💡 尝试将内容输出到屏幕...");
       console.log("\n" + markdown);
+    }
+  }
+
+  /**
+   * 复制2048游戏到out目录
+   */
+  async copy2048(): Promise<void> {
+    const sourceDir = join(process.cwd(), "incognito", "2048");
+    const targetDir = join(process.cwd(), "out", "2048");
+
+    console.log("\n🎮 正在生成2048游戏...");
+
+    try {
+      // 检查源目录是否存在
+      if (!existsSync(sourceDir)) {
+        console.log("❌ 源目录不存在: incognito/2048");
+        return;
+      }
+
+      // 确保out目录存在
+      if (!existsSync(join(process.cwd(), "out"))) {
+        mkdirSync(join(process.cwd(), "out"), { recursive: true });
+      }
+
+      // 复制整个目录
+      cpSync(sourceDir, targetDir, { recursive: true });
+
+      await this.delay(500);
+
+      console.log("\n");
+      console.log("╔═══════════════════════════════════════╗");
+      console.log("║         ✅ 生成成功！                 ║");
+      console.log("╚═══════════════════════════════════════╝");
+      console.log("\n");
+      console.log("🎯 已经生成好了2048，并且放到了out目录下");
+      console.log(`📂 路径: ${targetDir}`);
+      console.log("\n");
+      console.log("💡 打开 out/2048/index.html 即可开始游戏！");
+      console.log("");
+    } catch (error) {
+      console.log("❌ 复制失败:", error);
     }
   }
 }

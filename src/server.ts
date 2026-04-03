@@ -115,6 +115,9 @@ app.post("/api/command", async (req: Request, res: Response) => {
       case "summary":
         await assistant.generateSummary();
         break;
+      case "2048":
+        await assistant.copy2048();
+        break;
       case "wx":
         // 生成二维码图片（Web端用）
         const qrCodeUrl = await assistant.generateQRCodeBase64();

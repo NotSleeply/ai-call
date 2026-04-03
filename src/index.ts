@@ -217,6 +217,7 @@ class DaxiaDemo {
       news: "获取新闻",
       email: "获取邮件",
       summary: "生成总结",
+      "2048": "生成2048游戏",
     };
 
     const loadingText = loadingMessages[cmd.toLowerCase()] || "思考中";
@@ -302,6 +303,12 @@ class DaxiaDemo {
       case "summary":
         output = await this.captureOutput(async () => {
           await this.assistant.generateSummary();
+        });
+        this.saveAssistantMessage(output);
+        break;
+      case "2048":
+        output = await this.captureOutput(async () => {
+          await this.assistant.copy2048();
         });
         this.saveAssistantMessage(output);
         break;
