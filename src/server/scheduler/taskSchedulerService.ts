@@ -11,7 +11,7 @@ import type {
 } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
 
-const DEMO_AI_NEWS_OUTPUT = `🗞️ 每日 AI 新闻总结（演示）
+const DEMO_AI_NEWS_OUTPUT = `🗞️ 每日 AI 新闻总结
 
 1. 开源推理模型继续降本增效
 - 社区主流模型在长上下文和代码场景表现持续提升，推理成本进一步下降。

@@ -38,10 +38,6 @@ interface ScheduleRunLogItem {
   createdAt: string;
 }
 
-const DEMO_SCHEDULE_NAME = "每日AI新闻总结";
-const DEMO_SCHEDULE_PROMPT =
-  "请总结今天 AI 行业 5 条重点新闻，并给出简短点评。";
-
 export function useScheduleManager(
   currentChatId: Ref<number>,
   defaultModelProvider: Ref<ModelProvider>,
@@ -61,9 +57,9 @@ export function useScheduleManager(
 
   function createDefaultScheduleForm(): ScheduleFormState {
     return {
-      name: DEMO_SCHEDULE_NAME,
+      name: "",
       workspace: "",
-      prompt: DEMO_SCHEDULE_PROMPT,
+      prompt: "",
       modelProvider: defaultModelProvider.value,
       modelName:
         defaultModelProvider.value === "auto" ? "" : defaultModelName.value,
