@@ -31,6 +31,24 @@
 - **analyze** - 分析项目结构
 - **ask** - 智能问答
 
+### 🧩 Skill 管理（可视化）
+
+- Web 顶部提供 **Skill 管理** 面板
+- 支持 Skill 的列表查看、创建、编辑、删除、运行
+- 内置默认 Skill（首次启动自动注入）：
+  - 代码审查
+  - 需求拆解
+  - 故障排查
+- 默认 Skill 可编辑但不可删除
+- 新增可执行模块 Skill 示例文件：`skills/repo-auto-backup.skill.js`
+  - 这是一个真实 JS Skill，不是纯 prompt
+  - 触发词命中后可在聊天中自动调用
+  - 用于把当前仓库备份到指定目录
+- 新增 Python 模块 Skill 示例文件：`skills/batch-add-file-prefix.skill.py`
+  - 可解析自然语言中的目录和前缀
+  - 用于批量给文件添加前缀
+  - 示例：给 `D:/Downloads` 加前缀 `202604_`
+
 ### 💬 自然语言交互
 
 - 支持自然语言对话
@@ -131,6 +149,8 @@ pnpm run web
 | `ollama <问题>` | 使用本地 Ollama 回答 | `ollama 你好，请介绍你自己` |
 | `exit` | 退出程序 | `exit` |
 
+> Web 端可通过顶部 **Skill 管理** 按钮进行可视化 Skill 配置与运行。
+
 ## 演示场景
 
 ### 场景1：多Agent协同工作
@@ -138,6 +158,30 @@ pnpm run web
 ```text
 > agents 为 SmallClaw 做一次版本迭代规划
 ```
+
+### 场景1.1：自动调用仓库备份 Skill（新增）
+
+```text
+> 请把当前仓库备份到 D:/CodeBackups
+```
+
+说明：
+
+- 命中“备份仓库/备份代码/自动备份/backup repo”等关键词后，后端会优先自动调用模块 Skill。
+- 默认会排除 `.git`、`node_modules`、`dist`、`out`、`backups` 等目录。
+- 如不写路径，默认备份到当前项目上级目录下的 `smallclaw_backups`。
+
+### 场景1.2：自动调用 Python 前缀 Skill（新增）
+
+```text
+> 给 "D:/Downloads" 加前缀 "202604_"
+```
+
+说明：
+
+- 命中“加前缀/批量前缀/batch prefix”等关键词时，会优先尝试触发该模块 Skill。
+- 该 Skill 入口文件为 `skills/batch-add-file-prefix.skill.py`。
+- 若环境下 Python 命令不是 `python`，可配置环境变量 `PYTHON_BIN` 指定解释器路径。
 
 ### 场景2：文件操作
 

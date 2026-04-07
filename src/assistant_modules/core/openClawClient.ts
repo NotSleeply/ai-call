@@ -275,4 +275,48 @@ export class OpenClawClient {
       return `DeepSeek 与 Ollama 均调用失败：${msg}`;
     }
   }
+
+  async generateWithSystemPrompt(
+    systemPrompt: string,
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+  ): Promise<string> {
+    const question = userInput.trim();
+
+    if (!question) {
+      return "请输入要让 skill 处理的任务内容。";
+    }
+
+    const normalizedHistory =
+      this.normalizeConversationHistory(conversationHistory);
+    const messages: ChatMessage[] = [
+      {
+        role: "system",
+        content: systemPrompt.trim() || this.openClawSystemPrompt,
+      },
+      ...normalizedHistory.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+      { role: "user", content: question },
+    ];
+
+    if (this.isDeepSeekEnabled()) {
+      try {
+        return await this.requestDeepSeek(messages);
+      } catch {
+        // DeepSeek 失败时回退 Ollama
+      }
+    }
+
+    try {
+      return await this.requestOllama(messages);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!this.isDeepSeekEnabled()) {
+        return `未检测到 DeepSeek API Key，且 Ollama 调用失败：${msg}`;
+      }
+      return `DeepSeek 与 Ollama 均调用失败：${msg}`;
+    }
+  }
 }

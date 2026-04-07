@@ -10,6 +10,11 @@ export const quickCommands = [
     label: "多Agent协同",
     icon: "🤝",
   },
+  {
+    name: "请把当前仓库备份到 D:/CodeBackups",
+    label: "仓库备份Skill",
+    icon: "🧩",
+  },
   { name: "weather", label: "天气", icon: "🌤️" },
   { name: "news", label: "新闻", icon: "📰" },
   { name: "email", label: "邮件", icon: "📧" },

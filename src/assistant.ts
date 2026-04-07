@@ -24,6 +24,7 @@ const HELP_TEXT = `
 │  email                   总结邮件                           │
 │  summary                 生成对话总结（Markdown格式）       │
 │  agents [任务]           多Agent协同完成任务演示            │
+│  skill <子命令>          配置/添加/运行自定义Skill          │
 │  ollama <问题>           使用本地Ollama回答问题             │
 │  2048                    生成2048游戏到out目录               │
 │  exit                    退出程序                           │
@@ -140,6 +141,18 @@ export class DaxiaAssistant {
 
   async runMultiAgentCollaboration(task?: string): Promise<void> {
     await this.multiAgentService.runCollaboration(task);
+  }
+
+  async runSkillTask(
+    skillPrompt: string,
+    task: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+  ): Promise<string> {
+    return this.openClawClient.generateWithSystemPrompt(
+      skillPrompt,
+      task,
+      conversationHistory,
+    );
   }
 
   async copy2048(): Promise<void> {

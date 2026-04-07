@@ -24,3 +24,20 @@ export interface Message {
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
 }
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  mode?: "prompt" | "module";
+  module_entry?: string;
+  auto_triggers?: string[];
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SkillRunResult {
+  output: string;
+}

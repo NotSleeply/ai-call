@@ -53,6 +53,12 @@
       <!-- 顶部标题栏 -->
       <header class="h-14 border-b flex items-center px-6 bg-white">
         <h1 class="font-medium text-gray-800">{{ currentChat?.title || '大虾助手' }}</h1>
+        <div class="ml-auto">
+          <button @click="openPanel"
+            class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
+            Skill 管理
+          </button>
+        </div>
       </header>
 
       <!-- 消息列表 -->
@@ -117,6 +123,143 @@
         </div>
       </footer>
     </main>
+
+    <div v-if="skillPanelVisible" class="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4">
+      <div class="w-full max-w-6xl h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex">
+        <aside class="w-72 border-r bg-slate-50 flex flex-col">
+          <div class="px-4 py-3 border-b bg-white">
+            <h2 class="font-semibold text-slate-800">Skills</h2>
+            <p class="text-xs text-slate-500 mt-1">默认 Skill 已内置，可新建自定义 Skill</p>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-2 space-y-1">
+            <button v-for="skill in skills" :key="skill.id" @click="selectSkill(skill.id)" :class="[
+              'w-full text-left px-3 py-2 rounded-lg transition-colors border',
+              skill.id === selectedSkillId
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                : 'bg-white border-transparent hover:bg-slate-100'
+            ]">
+              <div class="text-sm font-medium truncate">{{ skill.name }}</div>
+              <div class="text-xs text-slate-500 truncate mt-1">{{ skill.description }}</div>
+              <span v-if="skill.is_default"
+                class="inline-block mt-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">默认</span>
+            </button>
+            <div v-if="!skillLoading && skills.length === 0" class="px-3 py-4 text-xs text-slate-500">
+              暂无 Skill，请在右侧创建。
+            </div>
+          </div>
+
+          <div class="p-3 border-t bg-white">
+            <button @click="refreshSkills" :disabled="skillLoading"
+              class="w-full py-2 text-sm rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-50">
+              {{ skillLoading ? '刷新中...' : '刷新列表' }}
+            </button>
+          </div>
+        </aside>
+
+        <section class="flex-1 flex flex-col">
+          <div class="px-6 py-4 border-b flex items-center">
+            <h3 class="font-semibold text-slate-800">Skill 工作台</h3>
+            <button @click="closePanel"
+              class="ml-auto px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-100">
+              关闭
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div v-if="skillError" class="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+              {{ skillError }}
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="rounded-xl border border-slate-200 p-4 bg-white">
+                <h4 class="font-medium text-slate-800">新建 Skill</h4>
+                <div class="mt-4 space-y-3">
+                  <select v-model="createForm.mode"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="prompt">Prompt Skill（模型执行）</option>
+                    <option value="module">Module Skill（脚本执行）</option>
+                  </select>
+                  <input v-model="createForm.name" type="text" placeholder="Skill 名称"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <input v-model="createForm.description" type="text" placeholder="Skill 描述"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <textarea v-model="createForm.prompt" rows="6"
+                    :placeholder="createForm.mode === 'prompt' ? 'System Prompt' : '模块说明（可选）'"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                  <input v-if="createForm.mode === 'module'" v-model="createForm.moduleEntry" type="text"
+                    placeholder="模块入口，例如：skills/my-skill.skill.js 或 .py"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <textarea v-if="createForm.mode === 'module'" v-model="createForm.autoTriggersText" rows="3"
+                    placeholder="自动触发词（每行一个），例如：备份仓库"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                  <button @click="handleCreateSkill" :disabled="skillSaving"
+                    class="w-full py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                    {{ skillSaving ? '创建中...' : '创建 Skill' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 p-4 bg-white">
+                <h4 class="font-medium text-slate-800">编辑选中 Skill</h4>
+                <div v-if="!selectedSkill" class="mt-4 text-sm text-slate-500">请先从左侧选择一个 Skill。</div>
+                <div v-else class="mt-4 space-y-3">
+                  <select v-model="editForm.mode"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="prompt">Prompt Skill（模型执行）</option>
+                    <option value="module">Module Skill（脚本执行）</option>
+                  </select>
+                  <input v-model="editForm.name" type="text"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <input v-model="editForm.description" type="text"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <textarea v-model="editForm.prompt" rows="6"
+                    :placeholder="editForm.mode === 'prompt' ? 'System Prompt' : '模块说明（可选）'"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                  <input v-if="editForm.mode === 'module'" v-model="editForm.moduleEntry" type="text"
+                    placeholder="模块入口，例如：skills/my-skill.skill.js 或 .py"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <textarea v-if="editForm.mode === 'module'" v-model="editForm.autoTriggersText" rows="3"
+                    placeholder="自动触发词（每行一个）"
+                    class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+
+                  <div class="flex gap-2">
+                    <button @click="handleUpdateSkill" :disabled="skillSaving"
+                      class="flex-1 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50">
+                      {{ skillSaving ? '保存中...' : '保存修改' }}
+                    </button>
+                    <button @click="handleDeleteSkill" :disabled="skillSaving || selectedSkill.is_default"
+                      class="flex-1 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                      删除 Skill
+                    </button>
+                  </div>
+                  <p v-if="selectedSkill.is_default" class="text-xs text-slate-500">
+                    默认 Skill 可编辑，但不允许删除。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 p-4 bg-white">
+              <h4 class="font-medium text-slate-800">运行 Skill 任务</h4>
+              <div v-if="!selectedSkill" class="mt-4 text-sm text-slate-500">请先选择 Skill 后再运行。</div>
+              <div v-else class="mt-4 space-y-3">
+                <textarea v-model="taskInput" rows="4" placeholder="输入要交给 Skill 的任务..."
+                  class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <button @click="handleRunSkill" :disabled="skillRunning || !taskInput.trim()"
+                  class="px-5 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+                  {{ skillRunning ? '运行中...' : '运行并生成结果' }}
+                </button>
+                <div v-if="runOutput"
+                  class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm whitespace-pre-wrap text-slate-700">
+                  {{ runOutput }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -124,6 +267,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { daxiaAPI, type CommandResponse } from './api/daxia'
 import { commandKeywords, quickCommands } from './features/chat/constants'
+import { useSkillManager } from './features/skills/composables/useSkillManager'
 import { renderMarkdown } from './features/chat/markdown'
 import { useCommandExecution } from './features/chat/composables/useCommandExecution'
 import { useConversationState } from './features/chat/composables/useConversationState'
@@ -138,6 +282,29 @@ import {
 const isConnected = ref(false)
 const inputText = ref('')
 const pendingLaunchUrl = ref<string | null>(null)
+const skillManager = useSkillManager()
+const {
+  visible: skillPanelVisible,
+  loading: skillLoading,
+  saving: skillSaving,
+  running: skillRunning,
+  error: skillError,
+  skills,
+  selectedSkill,
+  selectedSkillId,
+  createForm,
+  editForm,
+  taskInput,
+  runOutput,
+  openPanel,
+  closePanel,
+  refreshSkills,
+  selectSkill,
+  createSkill,
+  updateSelectedSkill,
+  deleteSelectedSkill,
+  runSelectedSkill,
+} = skillManager
 
 const {
   loading,
@@ -247,6 +414,34 @@ async function sendMessage(): Promise<void> {
 async function sendQuickCommand(command: string): Promise<void> {
   inputText.value = command
   await sendMessage()
+}
+
+async function handleCreateSkill(): Promise<void> {
+  if (!createForm.value.name.trim()) return
+  if (createForm.value.mode === 'prompt' && !createForm.value.prompt.trim()) return
+  if (createForm.value.mode === 'module' && !createForm.value.moduleEntry.trim()) return
+  await createSkill()
+}
+
+async function handleUpdateSkill(): Promise<void> {
+  if (!selectedSkill.value) return
+  if (!editForm.value.name.trim()) return
+  if (editForm.value.mode === 'prompt' && !editForm.value.prompt.trim()) return
+  if (editForm.value.mode === 'module' && !editForm.value.moduleEntry.trim()) return
+  await updateSelectedSkill()
+}
+
+async function handleDeleteSkill(): Promise<void> {
+  if (!selectedSkill.value) return
+  if (selectedSkill.value.is_default) return
+  if (!window.confirm('确认删除该 Skill 吗？')) return
+  await deleteSelectedSkill()
+}
+
+async function handleRunSkill(): Promise<void> {
+  if (!selectedSkill.value) return
+  if (!taskInput.value.trim()) return
+  await runSelectedSkill()
 }
 
 onMounted(async () => {

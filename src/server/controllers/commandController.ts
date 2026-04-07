@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { DaxiaAssistant } from "../../assistant.js";
 import { ConversationModel, MessageModel } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
+import { ModuleSkillRunner } from "../skills/moduleSkillRunner.js";
+import { SkillStore } from "../skills/skillStore.js";
 
 interface CommandRequestBody {
   command?: string;
@@ -31,6 +33,9 @@ export function createCommandHandler(
   assistant: DaxiaAssistant,
   publicServerOrigin: string,
 ) {
+  const skillStore = new SkillStore();
+  const moduleSkillRunner = new ModuleSkillRunner();
+
   return async function handleCommand(
     req: Request,
     res: Response,
@@ -105,8 +110,17 @@ export function createCommandHandler(
         case "help":
           assistant.showHelp();
           break;
-        default:
+        default: {
+          const autoSkill = skillStore.findAutoRunnable(command);
+          if (autoSkill && autoSkill.mode === "module") {
+            const skillOutput = await moduleSkillRunner.run(autoSkill, command);
+            console.log(`🧩 已自动调用 Skill：${autoSkill.name}`);
+            console.log(skillOutput);
+            break;
+          }
+
           await assistant.smartChat(command, historyForModel);
+        }
       }
 
       const data = capture.logs.join("\n");

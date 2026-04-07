@@ -6,6 +6,7 @@ import { PUBLIC_SERVER_ORIGIN } from "./config.js";
 import { conversationRoutes } from "./routes/conversationRoutes.js";
 import { createCommandRoutes } from "./routes/commandRoutes.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
+import { createSkillRoutes } from "./routes/skillRoutes.js";
 
 export function createServerApp(): express.Express {
   const app = express();
@@ -18,6 +19,7 @@ export function createServerApp(): express.Express {
 
   app.use("/api", conversationRoutes);
   app.use("/api", createCommandRoutes(assistant, PUBLIC_SERVER_ORIGIN));
+  app.use("/api", createSkillRoutes(assistant));
   app.use("/api", healthRoutes);
 
   return app;
