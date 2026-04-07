@@ -35,7 +35,9 @@ export function useConversationState() {
     }
   }
 
-  async function loadMessages(conversationId: number = currentChatId.value): Promise<void> {
+  async function loadMessages(
+    conversationId: number = currentChatId.value,
+  ): Promise<void> {
     if (!conversationId) return;
 
     const token = ++loadMessagesToken;
@@ -44,7 +46,10 @@ export function useConversationState() {
       const conversation = await daxiaAPI.getConversation(conversationId);
 
       // Ignore stale loads or responses for conversations that are no longer active.
-      if (token !== loadMessagesToken || conversationId !== currentChatId.value) {
+      if (
+        token !== loadMessagesToken ||
+        conversationId !== currentChatId.value
+      ) {
         return;
       }
 
