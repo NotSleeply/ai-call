@@ -269,15 +269,14 @@ async function sendMessage(): Promise<void> {
 
     appendLocalMessage('assistant', '🚀 已启动成功，正在为你打开 2048...')
 
-    await new Promise<void>((resolve) => {
-      setTimeout(() => {
-        const newTab = window.open(launchUrl, '_blank')
-        if (newTab) {
-          newTab.focus()
-        }
-        resolve()
-      }, 3000)
-    })
+
+    setTimeout(() => {
+      const newTab = window.open(launchUrl, '_blank')
+      if (newTab) {
+        newTab.focus()
+      }
+    }, 9000)
+
     return
   }
 
