@@ -33,6 +33,7 @@ export const commandConfig: Record<string, { loading: string }> = {
   summary: { loading: "正在生成总结..." },
   wx: { loading: "正在连接微信..." },
   ollama: { loading: "正在调用本地 Ollama..." },
+  skillrun: { loading: "正在执行所选 Skill..." },
   analyze: { loading: "正在分析项目..." },
   help: { loading: "获取帮助信息..." },
   "2048": { loading: "正在生成2048游戏..." },

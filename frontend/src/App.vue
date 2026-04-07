@@ -112,14 +112,81 @@
 
       <!-- 输入区域 -->
       <footer class="border-t p-4 bg-white">
-        <div class="flex space-x-4">
-          <input v-model="inputText" @keydown.enter="sendMessage" type="text" placeholder="输入命令或消息..."
-            class="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :disabled="loading" />
-          <button @click="sendMessage" :disabled="loading || !inputText.trim()"
-            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-            发送
-          </button>
+        <div class="rounded-2xl border border-slate-200 px-3 py-3 shadow-sm">
+          <div class="flex gap-3 items-end">
+            <div class="flex-1 min-w-0">
+              <div v-if="chatSelectedSkill"
+                class="inline-flex items-center gap-2 mb-2 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs text-indigo-700">
+                <span>🧩 {{ chatSelectedSkill.name }}</span>
+                <button @click="clearChatSelectedSkill" class="text-indigo-500 hover:text-indigo-700">✕</button>
+              </div>
+              <input v-model="inputText" @keydown.enter="sendMessage" type="text" :placeholder="inputPlaceholder"
+                class="w-full py-1.5 px-1 bg-transparent focus:outline-none" :disabled="loading" />
+            </div>
+
+            <button @click="sendMessage" :disabled="loading || !inputText.trim()"
+              class="h-10 px-5 bg-slate-900 text-white rounded-xl hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              发送
+            </button>
+          </div>
+
+          <div ref="toolbarMenuRef" class="mt-3 flex items-center gap-2 text-sm relative">
+            <div class="relative">
+              <button @click="toggleModelMenu"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
+                <span>🧠</span>
+                <span>{{ selectedModelLabel }}</span>
+                <span>▾</span>
+              </button>
+
+              <div v-if="modelMenuOpen"
+                class="absolute left-0 bottom-[calc(100%+8px)] w-44 rounded-xl border border-slate-200 bg-white shadow-xl p-1 z-30">
+                <button @click="chooseModel('auto')"
+                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                  Auto（默认）
+                </button>
+                <button @click="chooseModel('ollama')"
+                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                  Ollama（强制）
+                </button>
+              </div>
+            </div>
+
+            <div class="relative">
+              <button @click="toggleSkillMenu"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
+                <span>🧩</span>
+                <span>Skills</span>
+                <span>▾</span>
+              </button>
+
+              <div v-if="skillMenuOpen"
+                class="absolute left-0 bottom-[calc(100%+8px)] w-[320px] max-h-[340px] rounded-xl border border-slate-200 bg-white shadow-xl z-30 flex flex-col overflow-hidden">
+                <div class="px-3 py-2 border-b border-slate-100">
+                  <input v-model="skillSearchKeyword" type="text" placeholder="搜索技能"
+                    class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div class="overflow-y-auto p-1.5 space-y-1">
+                  <button @click="chooseChatSkill('')"
+                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                    不使用 Skill
+                  </button>
+
+                  <button v-for="skill in filteredChatSkills" :key="`picker-${skill.id}`"
+                    @click="chooseChatSkill(skill.id)"
+                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100">
+                    <div class="text-sm font-medium text-slate-800 truncate">{{ skill.name }}</div>
+                    <div class="text-xs text-slate-500 truncate mt-0.5">{{ skill.description }}</div>
+                  </button>
+
+                  <div v-if="filteredChatSkills.length === 0" class="px-2.5 py-3 text-xs text-slate-500">
+                    没找到匹配技能。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </footer>
     </main>
@@ -264,8 +331,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { daxiaAPI, type CommandResponse } from './api/daxia'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { daxiaAPI, type CommandResponse, type Skill } from './api/daxia'
 import { commandKeywords, quickCommands } from './features/chat/constants'
 import { useSkillManager } from './features/skills/composables/useSkillManager'
 import { renderMarkdown } from './features/chat/markdown'
@@ -282,6 +349,12 @@ import {
 const isConnected = ref(false)
 const inputText = ref('')
 const pendingLaunchUrl = ref<string | null>(null)
+const selectedModel = ref<'auto' | 'ollama'>('auto')
+const chatSelectedSkillId = ref('')
+const modelMenuOpen = ref(false)
+const skillMenuOpen = ref(false)
+const skillSearchKeyword = ref('')
+const toolbarMenuRef = ref<HTMLElement | null>(null)
 const skillManager = useSkillManager()
 const {
   visible: skillPanelVisible,
@@ -305,6 +378,32 @@ const {
   deleteSelectedSkill,
   runSelectedSkill,
 } = skillManager
+
+const chatSelectedSkill = computed<Skill | null>(() =>
+  skills.value.find((skill) => skill.id === chatSelectedSkillId.value) || null,
+)
+
+const selectedModelLabel = computed(() =>
+  selectedModel.value === 'ollama' ? 'Ollama' : 'Auto',
+)
+
+const filteredChatSkills = computed(() => {
+  const keyword = skillSearchKeyword.value.trim().toLowerCase()
+  if (!keyword) {
+    return skills.value
+  }
+
+  return skills.value.filter((skill) =>
+    `${skill.name} ${skill.description}`.toLowerCase().includes(keyword),
+  )
+})
+
+const inputPlaceholder = computed(() => {
+  if (chatSelectedSkill.value) {
+    return `已选择 ${chatSelectedSkill.value.name}，输入要执行的任务...`
+  }
+  return '输入命令或消息...'
+})
 
 const {
   loading,
@@ -390,13 +489,17 @@ async function sendMessage(): Promise<void> {
   inputText.value = ''
   const firstToken = text.split(' ')[0]
   const isCommand = commandKeywords.has(firstToken)
+  const commandOptions = {
+    modelPreference: selectedModel.value,
+    skillId: chatSelectedSkill.value?.id,
+  }
 
   let response: CommandResponse | null = null
 
   if (isCommand) {
-    response = await executeCommand(text)
+    response = await executeCommand(text, commandOptions)
   } else {
-    response = await handleChat(text)
+    response = await handleChat(text, commandOptions)
   }
 
   if (response?.success) {
@@ -414,6 +517,44 @@ async function sendMessage(): Promise<void> {
 async function sendQuickCommand(command: string): Promise<void> {
   inputText.value = command
   await sendMessage()
+}
+
+function clearChatSelectedSkill(): void {
+  chatSelectedSkillId.value = ''
+}
+
+function toggleModelMenu(): void {
+  modelMenuOpen.value = !modelMenuOpen.value
+  if (modelMenuOpen.value) {
+    skillMenuOpen.value = false
+  }
+}
+
+function toggleSkillMenu(): void {
+  skillMenuOpen.value = !skillMenuOpen.value
+  if (skillMenuOpen.value) {
+    modelMenuOpen.value = false
+    skillSearchKeyword.value = ''
+  }
+}
+
+function chooseModel(model: 'auto' | 'ollama'): void {
+  selectedModel.value = model
+  modelMenuOpen.value = false
+}
+
+function chooseChatSkill(skillId: string): void {
+  chatSelectedSkillId.value = skillId
+  skillMenuOpen.value = false
+  skillSearchKeyword.value = ''
+}
+
+function handleClickOutsideMenus(event: MouseEvent): void {
+  const target = event.target as Node
+  if (!toolbarMenuRef.value?.contains(target)) {
+    modelMenuOpen.value = false
+    skillMenuOpen.value = false
+  }
 }
 
 async function handleCreateSkill(): Promise<void> {
@@ -445,13 +586,19 @@ async function handleRunSkill(): Promise<void> {
 }
 
 onMounted(async () => {
+  window.addEventListener('click', handleClickOutsideMenus)
   isConnected.value = await daxiaAPI.healthCheck()
+  await refreshSkills()
   await loadChatList()
   await loadMessages()
 
   if (messageListRef.value) {
     scrollToBottom()
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleClickOutsideMenus)
 })
 </script>
 

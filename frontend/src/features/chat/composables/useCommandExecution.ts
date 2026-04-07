@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import { daxiaAPI, type CommandResponse } from "../../../api/daxia";
+import type { CommandExecutionOptions } from "../../../api/commands";
 import { commandConfig } from "../constants";
 import { wait } from "../utils";
 
@@ -19,6 +20,7 @@ export function useCommandExecution(
 ) {
   async function executeCommand(
     command: string,
+    options?: CommandExecutionOptions,
   ): Promise<CommandResponse | null> {
     const cmd = command.split(" ")[0];
     const config = commandConfig[cmd] || { loading: "执行中..." };
@@ -30,7 +32,11 @@ export function useCommandExecution(
     let response: CommandResponse | null = null;
 
     try {
-      response = await daxiaAPI.executeCommand(command, currentChatId.value);
+      response = await daxiaAPI.executeCommand(
+        command,
+        currentChatId.value,
+        options,
+      );
     } catch (error) {
       console.error("执行命令失败:", error);
     } finally {
@@ -45,7 +51,10 @@ export function useCommandExecution(
     return response;
   }
 
-  async function handleChat(text: string): Promise<CommandResponse | null> {
+  async function handleChat(
+    text: string,
+    options?: CommandExecutionOptions,
+  ): Promise<CommandResponse | null> {
     loadingController.startLoadingState("思考中...");
 
     const startTime = Date.now();
@@ -54,7 +63,11 @@ export function useCommandExecution(
     let response: CommandResponse | null = null;
 
     try {
-      response = await daxiaAPI.executeCommand(text, currentChatId.value);
+      response = await daxiaAPI.executeCommand(
+        text,
+        currentChatId.value,
+        options,
+      );
     } catch (error) {
       console.error("对话失败:", error);
     } finally {

@@ -1,14 +1,21 @@
 import { httpClient } from "./http";
 import type { CommandResponse } from "./types";
 
+export interface CommandExecutionOptions {
+  modelPreference?: "auto" | "ollama";
+  skillId?: string;
+}
+
 export async function executeCommand(
   command: string,
   conversationId?: number,
+  options?: CommandExecutionOptions,
 ): Promise<CommandResponse> {
   try {
     const response = await httpClient.post<CommandResponse>("/command", {
       command,
       conversationId,
+      ...options,
     });
 
     return response.data;

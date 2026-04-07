@@ -8,6 +8,8 @@ import { SkillStore } from "../skills/skillStore.js";
 interface CommandRequestBody {
   command?: string;
   conversationId?: number;
+  modelPreference?: "auto" | "ollama";
+  skillId?: string;
 }
 
 function beginConsoleCapture(): {
@@ -40,7 +42,8 @@ export function createCommandHandler(
     req: Request,
     res: Response,
   ): Promise<void> {
-    const { command, conversationId } = req.body as CommandRequestBody;
+    const { command, conversationId, modelPreference, skillId } =
+      req.body as CommandRequestBody;
 
     if (!command) {
       res.json({
@@ -56,70 +59,98 @@ export function createCommandHandler(
     try {
       MessageModel.add(convId, "user", command);
 
+      const effectiveCommand =
+        modelPreference === "ollama" && !/^ollama\s+/i.test(command)
+          ? `ollama ${command}`
+          : command;
+
       const historyForModel = MessageModel.getByConversation(convId)
         .slice(0, -1)
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
       let openUrl: string | undefined;
 
-      switch (resolveCommandKey(command)) {
-        case "agents": {
-          const task = command
-            .replace(/^(agents|multiagent|swarm)\s*/i, "")
-            .trim();
-          await assistant.runMultiAgentCollaboration(task || undefined);
-          break;
-        }
-        case "weather":
-          await assistant.summarizeWeather();
-          break;
-        case "news":
-          await assistant.summarizeNews();
-          break;
-        case "email":
-          await assistant.summarizeEmail();
-          break;
-        case "summary":
-          await assistant.generateSummary();
-          break;
-        case "2048":
-          await assistant.copy2048();
-          openUrl = `${publicServerOrigin}/out/2048/index.html?t=${Date.now()}`;
-          break;
-        case "wx": {
-          const qrCodeUrl = await assistant.generateQRCodeBase64();
-          await assistant.connectWeChat();
-          MessageModel.add(
-            convId,
-            "assistant",
-            "请使用微信扫描二维码登录",
-            qrCodeUrl,
-          );
+      if (skillId) {
+        const selectedSkill = skillStore.getById(skillId);
 
-          capture.restore();
-          res.json({
-            success: true,
-            message: "微信连接成功",
-            data: { qrCodeUrl, message: capture.logs.join("\n") },
-          });
-          return;
+        if (!selectedSkill) {
+          console.log(`❌ 未找到指定 Skill: ${skillId}`);
+        } else {
+          const output =
+            selectedSkill.mode === "module"
+              ? await moduleSkillRunner.run(selectedSkill, command)
+              : await assistant.runSkillTask(
+                  selectedSkill.prompt,
+                  command,
+                  historyForModel,
+                );
+
+          console.log(`🧩 已使用选中 Skill：${selectedSkill.name}`);
+          console.log(output);
         }
-        case "analyze":
-          await assistant.analyzeProject();
-          break;
-        case "help":
-          assistant.showHelp();
-          break;
-        default: {
-          const autoSkill = skillStore.findAutoRunnable(command);
-          if (autoSkill && autoSkill.mode === "module") {
-            const skillOutput = await moduleSkillRunner.run(autoSkill, command);
-            console.log(`🧩 已自动调用 Skill：${autoSkill.name}`);
-            console.log(skillOutput);
+      } else {
+        switch (resolveCommandKey(effectiveCommand)) {
+          case "agents": {
+            const task = effectiveCommand
+              .replace(/^(agents|multiagent|swarm)\s*/i, "")
+              .trim();
+            await assistant.runMultiAgentCollaboration(task || undefined);
             break;
           }
+          case "weather":
+            await assistant.summarizeWeather();
+            break;
+          case "news":
+            await assistant.summarizeNews();
+            break;
+          case "email":
+            await assistant.summarizeEmail();
+            break;
+          case "summary":
+            await assistant.generateSummary();
+            break;
+          case "2048":
+            await assistant.copy2048();
+            openUrl = `${publicServerOrigin}/out/2048/index.html?t=${Date.now()}`;
+            break;
+          case "wx": {
+            const qrCodeUrl = await assistant.generateQRCodeBase64();
+            await assistant.connectWeChat();
+            MessageModel.add(
+              convId,
+              "assistant",
+              "请使用微信扫描二维码登录",
+              qrCodeUrl,
+            );
 
-          await assistant.smartChat(command, historyForModel);
+            capture.restore();
+            res.json({
+              success: true,
+              message: "微信连接成功",
+              data: { qrCodeUrl, message: capture.logs.join("\n") },
+            });
+            return;
+          }
+          case "analyze":
+            await assistant.analyzeProject();
+            break;
+          case "help":
+            assistant.showHelp();
+            break;
+          default: {
+            const autoSkill = skillStore.findAutoRunnable(effectiveCommand);
+            if (autoSkill && autoSkill.mode === "module") {
+              const skillOutput = await moduleSkillRunner.run(
+                autoSkill,
+                effectiveCommand,
+              );
+              console.log(`🧩 已自动调用 Skill：${autoSkill.name}`);
+              console.log(skillOutput);
+              break;
+            }
+
+            await assistant.smartChat(effectiveCommand, historyForModel);
+          }
         }
       }
 
