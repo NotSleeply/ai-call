@@ -3,7 +3,6 @@ import { existsSync } from "fs";
 import { copyFile, mkdir, rename, unlink } from "fs/promises";
 import { join } from "path";
 import { DaxiaAssistant } from "../../assistant.js";
-import { delay } from "../../assistant_modules/utils/delay.js";
 import { ConversationModel, MessageModel } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
 import { TaskSchedulerService } from "../scheduler/taskSchedulerService.js";
@@ -44,15 +43,12 @@ function beginConsoleCapture(): {
 function shouldRunBookDemoScript(input: string): boolean {
   const normalized = input.replace(/\s+/g, "");
 
-  const hasBook = normalized.includes("人间失格");
-  const hasFindIntent =
-    normalized.includes("忘记") ||
-    normalized.includes("帮我找") ||
-    normalized.includes("找到");
+  const hasBook = /人间失格/.test(normalized);
+  const hasFindIntent = /(忘记.*(哪里|在哪)|帮.*找|找到|查找|寻找)/.test(
+    normalized,
+  );
   const hasMoveToDesktopIntent =
-    normalized.includes("放在桌面上") ||
-    normalized.includes("放在桌面") ||
-    normalized.includes("移动到桌面");
+    /(放(在|到)桌面(上)?|移动到桌面|挪到桌面|放桌面)/.test(normalized);
 
   return hasBook && hasFindIntent && hasMoveToDesktopIntent;
 }
@@ -72,27 +68,42 @@ async function moveFileWithFallback(
 
 async function runBookDemoScript(): Promise<void> {
   console.log("🤔 收到，我先思考一下你的请求...");
-  await delay(900);
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      console.log("🔎 正在定位《人间失格》文件...");
 
-  console.log("🔎 正在定位《人间失格》文件...");
-  await delay(1100);
+      setTimeout(() => {
+        void (async () => {
+          try {
+            console.log(`📍 已检索目标路径：${BOOK_DEMO_SOURCE_PATH}`);
 
-  console.log(`📍 已检索目标路径：${BOOK_DEMO_SOURCE_PATH}`);
+            if (!existsSync(BOOK_DEMO_SOURCE_PATH)) {
+              console.log(`❌ 未找到文件：${BOOK_DEMO_SOURCE_PATH}`);
+              resolve();
+              return;
+            }
 
-  if (!existsSync(BOOK_DEMO_SOURCE_PATH)) {
-    console.log(`❌ 未找到文件：${BOOK_DEMO_SOURCE_PATH}`);
-    return;
-  }
+            await mkdir(BOOK_DEMO_DESKTOP_DIR, { recursive: true });
 
-  await mkdir(BOOK_DEMO_DESKTOP_DIR, { recursive: true });
+            if (BOOK_DEMO_SOURCE_PATH === BOOK_DEMO_TARGET_PATH) {
+              console.log("✅ 文件已经在桌面上，无需移动。");
+              resolve();
+              return;
+            }
 
-  if (BOOK_DEMO_SOURCE_PATH === BOOK_DEMO_TARGET_PATH) {
-    console.log("✅ 文件已经在桌面上，无需移动。");
-    return;
-  }
-
-  await moveFileWithFallback(BOOK_DEMO_SOURCE_PATH, BOOK_DEMO_TARGET_PATH);
-  console.log(`📦 已移动到桌面：${BOOK_DEMO_TARGET_PATH}`);
+            await moveFileWithFallback(
+              BOOK_DEMO_SOURCE_PATH,
+              BOOK_DEMO_TARGET_PATH,
+            );
+            console.log(`📦 已移动到桌面：${BOOK_DEMO_TARGET_PATH}`);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        })();
+      }, 5400);
+    }, 9000);
+  });
 }
 
 export function createCommandHandler(
