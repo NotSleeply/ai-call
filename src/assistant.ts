@@ -1,3 +1,4 @@
+// @ts-ignore -- NodeNext .js import resolves to .ts at build time; suppress editor false positive.
 import {
   ChatGenerationOptions,
   OpenClawClient,
