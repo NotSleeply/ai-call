@@ -589,7 +589,7 @@
                   </div>
 
                   <div class="flex items-center gap-2 shrink-0 flex-wrap">
-                    <button @click="handleRunScheduleNow(task.id)" :disabled="scheduleSaving"
+                    <button @click="openScheduleRunDialog(task)" :disabled="scheduleSaving"
                       class="px-3 py-1.5 text-sm rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
                       立即执行
                     </button>
@@ -631,6 +631,43 @@
               </div>
             </div>
           </section>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="scheduleRunDialogVisible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+      <div class="w-full max-w-2xl max-h-[78vh] rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center gap-2">
+          <h4 class="font-semibold text-slate-800">任务执行对话框 · {{ scheduleRunDialogTaskName || '定时任务' }}</h4>
+          <div class="ml-auto flex items-center gap-2">
+            <button @click="runScheduleNowFromDialog"
+              :disabled="scheduleRunDialogLoading || scheduleRunDialogTaskId === null"
+              class="px-3 py-1.5 text-sm rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+              {{ scheduleRunDialogLoading ? '执行中...' : '再次执行' }}
+            </button>
+            <button @click="closeScheduleRunDialog"
+              class="px-3 py-1.5 text-sm rounded-lg border border-slate-300 hover:bg-slate-100">
+              关闭
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 bg-slate-50 space-y-2">
+          <div v-if="scheduleRunDialogLogs.length === 0" class="text-sm text-slate-500">
+            暂无执行日志。
+          </div>
+
+          <div v-for="log in scheduleRunDialogLogs" :key="log.id" :class="[
+            'rounded-lg border px-3 py-2 whitespace-pre-wrap text-sm',
+            log.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : log.type === 'error'
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-slate-200 bg-white text-slate-700',
+          ]">
+            <div class="text-xs opacity-70 mb-1">{{ formatTime(log.createdAt) }}</div>
+            <div>{{ log.content }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -747,6 +784,21 @@ const scheduleForm = ref({
 const expandedScheduleTaskId = ref<number | null>(null)
 const scheduleRunsByTask = ref<Record<number, ScheduledTaskRun[]>>({})
 const scheduleRunsLoading = ref<Record<number, boolean>>({})
+
+type ScheduleRunLogType = 'info' | 'success' | 'error'
+
+interface ScheduleRunLogItem {
+  id: number
+  type: ScheduleRunLogType
+  content: string
+  createdAt: string
+}
+
+const scheduleRunDialogVisible = ref(false)
+const scheduleRunDialogTaskId = ref<number | null>(null)
+const scheduleRunDialogTaskName = ref('')
+const scheduleRunDialogLoading = ref(false)
+const scheduleRunDialogLogs = ref<ScheduleRunLogItem[]>([])
 
 const chatSelectedSkillId = ref('')
 const craftMenuOpen = ref(false)
@@ -1074,26 +1126,65 @@ async function handleToggleSchedule(taskId: number, enabled: boolean): Promise<v
   }
 }
 
-async function handleRunScheduleNow(taskId: number): Promise<void> {
-  scheduleSaving.value = true
-  scheduleError.value = ''
+function appendScheduleRunDialogLog(type: ScheduleRunLogType, content: string): void {
+  scheduleRunDialogLogs.value.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    type,
+    content,
+    createdAt: new Date().toISOString(),
+  })
+}
+
+function closeScheduleRunDialog(): void {
+  scheduleRunDialogVisible.value = false
+}
+
+function openScheduleRunDialog(task: ScheduledTask): void {
+  scheduleRunDialogTaskId.value = task.id
+  scheduleRunDialogTaskName.value = task.name
+  scheduleRunDialogLogs.value = []
+  scheduleRunDialogVisible.value = true
+  void runScheduleNowFromDialog()
+}
+
+function parseScheduleRunOutput(response: CommandResponse): string {
+  if (typeof response.data === 'object' && response.data !== null) {
+    const output = (response.data as { output?: unknown }).output
+    if (typeof output === 'string' && output.trim()) {
+      return output
+    }
+  }
+
+  return response.message || '执行完成'
+}
+
+async function runScheduleNowFromDialog(): Promise<void> {
+  const taskId = scheduleRunDialogTaskId.value
+  if (taskId === null) return
+
+  scheduleRunDialogLoading.value = true
+  appendScheduleRunDialogLog('info', '开始执行任务...')
 
   try {
     const response = await daxiaAPI.runScheduleNow(taskId)
     if (!response.success) {
-      scheduleError.value = response.message || '立即执行失败'
+      const message = response.message || '立即执行失败'
+      appendScheduleRunDialogLog('error', message)
+      scheduleError.value = message
       return
     }
 
-    await loadMessages()
-    await loadChatList()
+    const output = parseScheduleRunOutput(response)
+    appendScheduleRunDialogLog('success', output)
+
     await refreshScheduleTasks()
     await loadScheduleRuns(taskId)
   } catch (error) {
-    scheduleError.value =
-      error instanceof Error ? error.message : '立即执行失败'
+    const message = error instanceof Error ? error.message : '立即执行失败'
+    appendScheduleRunDialogLog('error', message)
+    scheduleError.value = message
   } finally {
-    scheduleSaving.value = false
+    scheduleRunDialogLoading.value = false
   }
 }
 
