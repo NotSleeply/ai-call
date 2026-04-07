@@ -10,12 +10,171 @@ import {
 import { join, extname } from "path";
 import { execSync } from "child_process";
 import QRCode from "qrcode";
+import { config as loadDotEnv } from "dotenv";
+
+type ChatRole = "system" | "user" | "assistant";
+
+interface ChatMessage {
+  role: ChatRole;
+  content: string;
+}
+
+const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 AI 智能体（Agent）。
+
+你的任务是根据用户的自然语言指令，自主规划步骤、调用工具、执行操作，并完成真实任务。
+
+遵守以下规则：
+
+1. 只做用户明确要求的事，不擅自扩展任务。
+
+2. 执行危险操作前必须先询问确认，包括：删除文件、格式化、修改系统配置、网络攻击、泄露信息。
+
+3. 执行步骤必须清晰、可解释，每一步都说明你要做什么、为什么这么做。
+
+4. 遇到错误时自动重试或给出修复方案，不直接崩溃。
+
+5. 不编造不存在的工具或功能，不知道就如实回答。
+
+6. 保护用户隐私，不记录、不泄露敏感信息（密码、密钥、个人数据）。
+
+7. 保持简洁高效，优先使用最稳定、最安全的方式完成任务。
+
+8. 如果任务复杂，拆分成多步执行，执行完一步再进行下一步。
+
+9. 永远以帮助用户、提高效率为目标，不拒绝合理的正常任务。
+
+现在，等待用户指令。`;
+
+loadDotEnv();
 
 /**
  * 大虾助手核心功能类
  * 演示AI助手的主要能力
  */
 export class DaxiaAssistant {
+  private readonly deepSeekApiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
+  private readonly deepSeekModel =
+    (process.env.DEEPSEEK_MODEL || "deepseek-chat").trim() || "deepseek-chat";
+  private readonly deepSeekBaseUrl =
+    (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").trim() ||
+    "https://api.deepseek.com";
+  private readonly openClawSystemPrompt = DEFAULT_OPENCLAW_SYSTEM_PROMPT;
+
+  private isDeepSeekEnabled(): boolean {
+    return this.deepSeekApiKey.length > 0;
+  }
+
+  private resolveDeepSeekEndpoints(): string[] {
+    const base = this.deepSeekBaseUrl.replace(/\/+$/, "");
+
+    if (
+      base.endsWith("/chat/completions") ||
+      base.endsWith("/v1/chat/completions")
+    ) {
+      return [base];
+    }
+
+    const endpoints = [
+      `${base}/chat/completions`,
+      base.endsWith("/v1")
+        ? `${base}/chat/completions`
+        : `${base}/v1/chat/completions`,
+    ];
+
+    return [...new Set(endpoints)];
+  }
+
+  private normalizeConversationHistory(
+    conversationHistory: Array<{ role: string; content: string }>,
+  ): Array<{ role: "user" | "assistant"; content: string }> {
+    return conversationHistory
+      .filter(
+        (msg): msg is { role: "user" | "assistant"; content: string } =>
+          (msg.role === "user" || msg.role === "assistant") &&
+          typeof msg.content === "string" &&
+          msg.content.trim().length > 0,
+      )
+      .slice(-12);
+  }
+
+  private async requestDeepSeek(messages: ChatMessage[]): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveDeepSeekEndpoints()) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.deepSeekApiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.deepSeekModel,
+            messages,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        const data = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+          error?: { message?: string };
+        };
+
+        const content = data.choices?.[0]?.message?.content?.trim();
+
+        if (content) {
+          return content;
+        }
+
+        lastError = data.error?.message || "DeepSeek 返回了空内容";
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        lastError = msg;
+      }
+    }
+
+    throw new Error(lastError || "DeepSeek 请求失败");
+  }
+
+  async generateOpenClawReply(
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+  ): Promise<string> {
+    const question = userInput.trim();
+
+    if (!question) {
+      return "请告诉我你想问什么。";
+    }
+
+    if (!this.isDeepSeekEnabled()) {
+      return "未检测到 DeepSeek API Key。请先在 .env 中配置 DEEPSEEK_API_KEY。";
+    }
+
+    const normalizedHistory =
+      this.normalizeConversationHistory(conversationHistory);
+    const messages: ChatMessage[] = [
+      { role: "system", content: this.openClawSystemPrompt },
+      ...normalizedHistory.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+      { role: "user", content: question },
+    ];
+
+    try {
+      return await this.requestDeepSeek(messages);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return `DeepSeek 调用失败：${msg}`;
+    }
+  }
+
   /**
    * 显示帮助信息
    */
@@ -314,7 +473,10 @@ ${Object.entries(stats.fileTypes)
   /**
    * 智能问答
    */
-  async askQuestion(question?: string): Promise<void> {
+  async askQuestion(
+    question?: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+  ): Promise<void> {
     if (!question) {
       console.log("❌ 请输入问题，例如: ask 什么是TypeScript?");
       return;
@@ -323,20 +485,10 @@ ${Object.entries(stats.fileTypes)
     console.log(`\n🤔 问题: ${question}`);
     console.log("─".repeat(60));
 
-    // 模拟智能回答
-    const answers: Record<string, string> = {
-      typescript:
-        "TypeScript是JavaScript的超集，添加了静态类型检查和面向对象编程特性。它编译成纯JavaScript，可以在任何浏览器和Node.js环境中运行。",
-      node: "Node.js是一个基于Chrome V8引擎的JavaScript运行环境，让JavaScript可以在服务器端运行。它使用事件驱动、非阻塞I/O模型，非常适合构建高性能的网络应用。",
-      大虾: "大虾是一个智能AI编程助手，可以帮助开发者完成代码编写、文件操作、项目管理等任务。它能够理解自然语言指令，自动执行复杂的开发工作流。",
-      default:
-        "这是一个很好的问题！在实际的大虾助手中，我会使用先进的AI模型来回答你的问题。这个Demo只是展示了基本的功能框架。",
-    };
-
-    const key = Object.keys(answers).find((k) =>
-      question.toLowerCase().includes(k),
+    const answer = await this.generateOpenClawReply(
+      question,
+      conversationHistory,
     );
-    const answer = answers[key || "default"];
 
     // 模拟打字效果
     process.stdout.write("💬 ");
@@ -350,23 +502,12 @@ ${Object.entries(stats.fileTypes)
   /**
    * 智能对话模式
    */
-  async smartChat(input: string): Promise<void> {
-    // 检测用户意图
-    if (
-      input.includes("什么") ||
-      input.includes("如何") ||
-      input.includes("怎么")
-    ) {
-      await this.askQuestion(input);
-    } else if (input.includes("谢谢")) {
-      console.log("😊 不客气！很高兴能帮到你！");
-    } else if (input.includes("你好")) {
-      console.log("👋 你好！我是大虾助手，有什么可以帮你的吗？");
-    } else {
-      console.log('💡 我理解你想了解关于"' + input + '"的内容。');
-      console.log("   在完整版大虾中，我会提供更详细的回答。");
-      console.log("   输入 help 查看可用命令，或输入 ask + 问题进行提问。");
-    }
+  async smartChat(
+    input: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+  ): Promise<void> {
+    const answer = await this.generateOpenClawReply(input, conversationHistory);
+    console.log(`💬 ${answer}`);
   }
 
   /**
@@ -390,10 +531,13 @@ ${Object.entries(stats.fileTypes)
 
     // 使用 qrcode 库生成终端 ASCII 二维码（CLI 模式）
     try {
-      const qrAscii = await QRCode.toString("https://weixin.qq.com/daxia-demo", {
-        type: "terminal",
-        small: true,
-      });
+      const qrAscii = await QRCode.toString(
+        "https://weixin.qq.com/daxia-demo",
+        {
+          type: "terminal",
+          small: true,
+        },
+      );
       console.log(qrAscii);
     } catch {
       // 如果失败，使用备用 ASCII 二维码
@@ -434,14 +578,17 @@ ${Object.entries(stats.fileTypes)
    */
   async generateQRCodeBase64(): Promise<string> {
     try {
-      const qrCodeUrl = await QRCode.toDataURL("https://weixin.qq.com/daxia-demo", {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
+      const qrCodeUrl = await QRCode.toDataURL(
+        "https://weixin.qq.com/daxia-demo",
+        {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: "#000000",
+            light: "#ffffff",
+          },
         },
-      });
+      );
       return qrCodeUrl;
     } catch (error) {
       throw new Error("生成二维码失败");
@@ -490,7 +637,11 @@ ${Object.entries(stats.fileTypes)
   /**
    * 绘制定位图案
    */
-  private drawFinderPattern(qrCode: string[][], startX: number, startY: number): void {
+  private drawFinderPattern(
+    qrCode: string[][],
+    startX: number,
+    startY: number,
+  ): void {
     // 外框
     for (let i = 0; i < 7; i++) {
       qrCode[startY][startX + i] = "██";
@@ -519,22 +670,23 @@ ${Object.entries(stats.fileTypes)
   private async showLoadingSpinner(action: string = "思考中"): Promise<void> {
     const minSeconds = 1;
     const maxSeconds = 20;
-    const duration = (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
-    
+    const duration =
+      (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
+
     const spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     const startTime = Date.now();
     let i = 0;
-    
+
     return new Promise((resolve) => {
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
-        
+
         // 清除当前行并显示旋转动画
         process.stdout.write(`\r${spinner[i]} ${action}... ${remaining}s`);
-        
+
         i = (i + 1) % spinner.length;
-        
+
         if (elapsed >= duration) {
           clearInterval(interval);
           process.stdout.write("\r" + " ".repeat(50) + "\r"); // 清除动画
@@ -626,15 +778,13 @@ ${Object.entries(stats.fileTypes)
         {
           标题: "科技突破：新型AI模型发布",
           来源: "科技日报",
-          摘要:
-            "最新研发的AI模型在多个领域取得突破性进展，将推动产业升级。",
+          摘要: "最新研发的AI模型在多个领域取得突破性进展，将推动产业升级。",
           重要度: "⭐⭐⭐⭐⭐",
         },
         {
           标题: "经济动态：市场持续回暖",
           来源: "经济观察报",
-          摘要:
-            "近期市场数据显示经济指标稳步上升，投资者信心增强。",
+          摘要: "近期市场数据显示经济指标稳步上升，投资者信心增强。",
           重要度: "⭐⭐⭐⭐",
         },
         {
@@ -921,7 +1071,7 @@ SmallClaw/
     // 在屏幕上显示部分内容
     const lines = markdown.split("\n");
     const previewLines = lines.slice(0, 30); // 显示前30行预览
-    
+
     for (const line of previewLines) {
       console.log(line);
       await this.delay(20);
@@ -932,7 +1082,10 @@ SmallClaw/
     console.log("");
 
     // 生成文件名（带时间戳）
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, 19);
     const filename = `conversation-summary-${timestamp}.md`;
 
     console.log("─".repeat(60));
@@ -941,7 +1094,7 @@ SmallClaw/
     try {
       // 写入文件
       writeFileSync(filename, markdown, "utf-8");
-      
+
       console.log(`✅ 文件已成功保存: ${filename}`);
       console.log(`📄 文件大小: ${Buffer.byteLength(markdown, "utf-8")} 字节`);
       console.log(`📍 保存路径: ${process.cwd()}\\${filename}`);

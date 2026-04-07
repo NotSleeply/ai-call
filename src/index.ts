@@ -53,21 +53,22 @@ class DaxiaDemo {
   private async showLoadingSpinner(action: string = "思考中"): Promise<void> {
     const minSeconds = 1;
     const maxSeconds = 20;
-    const duration = (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
-    
+    const duration =
+      (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
+
     const spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
     const startTime = Date.now();
     let i = 0;
-    
+
     return new Promise((resolve) => {
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
-        
+
         // 清除当前行并显示旋转动画
         process.stdout.write(`\r${spinner[i]} ${action}...`);
-        
+
         i = (i + 1) % spinner.length;
-        
+
         if (elapsed >= duration) {
           clearInterval(interval);
           process.stdout.write("\r" + " ".repeat(50) + "\r"); // 清除动画
@@ -202,6 +203,13 @@ class DaxiaDemo {
     // 保存用户消息
     this.saveUserMessage(input);
 
+    const historyForModel = this.currentConversationId
+      ? this.db
+          .getMessages(this.currentConversationId)
+          .slice(0, -1)
+          .map((msg) => ({ role: msg.role, content: msg.content }))
+      : [];
+
     // 根据命令类型显示不同的加载提示
     const loadingMessages: Record<string, string> = {
       help: "加载帮助信息",
@@ -266,7 +274,7 @@ class DaxiaDemo {
         break;
       case "ask":
         output = await this.captureOutput(async () => {
-          await this.assistant.askQuestion(args.join(" "));
+          await this.assistant.askQuestion(args.join(" "), historyForModel);
         });
         this.saveAssistantMessage(output);
         break;
@@ -315,7 +323,7 @@ class DaxiaDemo {
       default:
         // 智能问答模式
         output = await this.captureOutput(async () => {
-          await this.assistant.smartChat(input);
+          await this.assistant.smartChat(input, historyForModel);
         });
         this.saveAssistantMessage(output);
     }

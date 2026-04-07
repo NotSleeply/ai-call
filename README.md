@@ -77,6 +77,18 @@ pnpm install && pnpm run build
 cd frontend && pnpm install && cd ..   # 仅Web模式需要
 ```
 
+### 配置 DeepSeek（用于非命令对话）
+
+编辑项目根目录的 `.env`（可从 `.env.example` 复制）：
+
+```bash
+DEEPSEEK_API_KEY=你的DeepSeekKey
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+说明：非命令问题（例如直接输入自然语言）会调用 DeepSeek，openclaw 人设 prompt 固定写在代码中，不从 `.env` 读取。
+
 ### CLI 模式
 
 ```bash

@@ -92,6 +92,10 @@ app.post("/api/command", async (req: Request, res: Response) => {
     // 保存用户消息
     MessageModel.add(convId, "user", command);
 
+    const historyForModel = MessageModel.getByConversation(convId)
+      .slice(0, -1)
+      .map((msg) => ({ role: msg.role, content: msg.content }));
+
     let data: any = "";
 
     // 捕获console.log输出
@@ -142,7 +146,7 @@ app.post("/api/command", async (req: Request, res: Response) => {
         assistant.showHelp();
         break;
       default:
-        await assistant.smartChat(command);
+        await assistant.smartChat(command, historyForModel);
     }
 
     // 恢复console.log
