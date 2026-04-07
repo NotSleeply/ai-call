@@ -225,6 +225,7 @@ class DaxiaDemo {
       news: "获取新闻",
       email: "获取邮件",
       summary: "生成总结",
+      agents: "多Agent协同",
       "2048": "生成2048游戏",
     };
 
@@ -311,6 +312,12 @@ class DaxiaDemo {
       case "summary":
         output = await this.captureOutput(async () => {
           await this.assistant.generateSummary();
+        });
+        this.saveAssistantMessage(output);
+        break;
+      case "agents":
+        output = await this.captureOutput(async () => {
+          await this.assistant.runMultiAgentCollaboration(args.join(" "));
         });
         this.saveAssistantMessage(output);
         break;

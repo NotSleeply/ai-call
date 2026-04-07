@@ -1,6 +1,7 @@
 import { OpenClawClient } from "./assistant_modules/core/openClawClient.js";
 import { FileSystemService } from "./assistant_modules/services/fileSystemService.js";
 import { GameService } from "./assistant_modules/services/gameService.js";
+import { MultiAgentService } from "./assistant_modules/services/multiAgentService.js";
 import { SummaryService } from "./assistant_modules/services/summaryService.js";
 import { WeChatService } from "./assistant_modules/services/weChatService.js";
 import { delay } from "./assistant_modules/utils/delay.js";
@@ -22,6 +23,7 @@ const HELP_TEXT = `
 │  news                    总结新闻                           │
 │  email                   总结邮件                           │
 │  summary                 生成对话总结（Markdown格式）       │
+│  agents [任务]           多Agent协同完成任务演示            │
 │  ollama <问题>           使用本地Ollama回答问题             │
 │  2048                    生成2048游戏到out目录               │
 │  exit                    退出程序                           │
@@ -40,6 +42,9 @@ export class DaxiaAssistant {
   private readonly weChatService = new WeChatService();
   private readonly summaryService = new SummaryService();
   private readonly gameService = new GameService();
+  private readonly multiAgentService = new MultiAgentService(
+    this.openClawClient,
+  );
 
   showHelp(): void {
     console.log(HELP_TEXT);
@@ -131,6 +136,10 @@ export class DaxiaAssistant {
 
   async generateSummary(): Promise<void> {
     await this.summaryService.generateSummary();
+  }
+
+  async runMultiAgentCollaboration(task?: string): Promise<void> {
+    await this.multiAgentService.runCollaboration(task);
   }
 
   async copy2048(): Promise<void> {

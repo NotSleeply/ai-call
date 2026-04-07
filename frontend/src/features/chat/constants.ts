@@ -5,6 +5,11 @@ export const loadingPhases = [
 ] as const;
 
 export const quickCommands = [
+  {
+    name: "agents 为 SmallClaw 规划一次前后端协同迭代",
+    label: "多Agent协同",
+    icon: "🤝",
+  },
   { name: "weather", label: "天气", icon: "🌤️" },
   { name: "news", label: "新闻", icon: "📰" },
   { name: "email", label: "邮件", icon: "📧" },
@@ -19,6 +24,7 @@ export const commandConfig: Record<string, { loading: string }> = {
   weather: { loading: "正在获取天气信息..." },
   news: { loading: "正在获取新闻..." },
   email: { loading: "正在获取邮件..." },
+  agents: { loading: "正在组织多 Agent 协同..." },
   summary: { loading: "正在生成总结..." },
   wx: { loading: "正在连接微信..." },
   ollama: { loading: "正在调用本地 Ollama..." },
@@ -31,6 +37,7 @@ export const commandKeywords = new Set([
   "weather",
   "news",
   "email",
+  "agents",
   "summary",
   "wx",
   "ollama",

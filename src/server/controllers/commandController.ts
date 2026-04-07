@@ -58,6 +58,13 @@ export function createCommandHandler(
       let openUrl: string | undefined;
 
       switch (resolveCommandKey(command)) {
+        case "agents": {
+          const task = command
+            .replace(/^(agents|multiagent|swarm)\s*/i, "")
+            .trim();
+          await assistant.runMultiAgentCollaboration(task || undefined);
+          break;
+        }
         case "weather":
           await assistant.summarizeWeather();
           break;

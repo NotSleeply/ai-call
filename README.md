@@ -127,51 +127,58 @@ pnpm run web
 | `news` | 总结新闻 | `news` |
 | `email` | 总结邮件 | `email` |
 | `summary` | 生成对话总结 | `summary` |
+| `agents [任务]` | 多Agent协同工作演示 | `agents 为 SmallClaw 做一次版本迭代规划` |
 | `ollama <问题>` | 使用本地 Ollama 回答 | `ollama 你好，请介绍你自己` |
 | `exit` | 退出程序 | `exit` |
 
 ## 演示场景
 
-### 场景1：文件操作
+### 场景1：多Agent协同工作
 
+```text
+> agents 为 SmallClaw 做一次版本迭代规划
 ```
+
+### 场景2：文件操作
+
+```text
 > read package.json
 > write demo.txt 这是一个演示文件
 > list .
 ```
 
-### 场景2：代码搜索
+### 场景3：代码搜索
 
-```
+```text
 > search class
 > search import
 > search function
 ```
 
-### 场景3：项目分析
+### 场景4：项目分析
 
-```
+```text
 > analyze
 ```
 
-### 场景4：智能问答
+### 场景5：智能问答
 
-```
+```text
 > ask 什么是TypeScript?
 > ask 大虾能做什么?
 > 你好
 ```
 
-### 场景5：命令执行
+### 场景6：命令执行
 
-```
+```text
 > exec dir
 > exec echo Hello World
 ```
 
-### 场景6：微信连接
+### 场景7：微信连接
 
-```
+```text
 > wx
 
 🔄 正在初始化微信连接...
@@ -196,7 +203,7 @@ pnpm run web
 💡 提示: 现在可以使用微信相关功能了！
 ```
 
-### 场景7：信息总结
+### 场景8：信息总结
 
 #### 天气总结
 

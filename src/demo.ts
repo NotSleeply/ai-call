@@ -14,23 +14,32 @@ async function demo() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  // 演示1：显示帮助
+  // 演示1：多Agent协同
   console.log("═══════════════════════════════════════════════════════════");
-  console.log("📌 演示1: 显示帮助信息");
+  console.log("📌 演示1: 多Agent协同工作");
+  console.log("═══════════════════════════════════════════════════════════");
+  await assistant.runMultiAgentCollaboration(
+    "为 SmallClaw 制定一份前后端协同迭代计划",
+  );
+  await wait(2000);
+
+  // 演示2：显示帮助
+  console.log("\n═══════════════════════════════════════════════════════════");
+  console.log("📌 演示2: 显示帮助信息");
   console.log("═══════════════════════════════════════════════════════════");
   assistant.showHelp();
   await wait(2000);
 
-  // 演示2：读取文件
+  // 演示3：读取文件
   console.log("\n═══════════════════════════════════════════════════════════");
-  console.log("📌 演示2: 读取文件内容");
+  console.log("📌 演示3: 读取文件内容");
   console.log("═══════════════════════════════════════════════════════════");
   await assistant.readFile("package.json");
   await wait(2000);
 
-  // 演示3：列出目录
+  // 演示4：列出目录
   console.log("\n═══════════════════════════════════════════════════════════");
-  console.log("📌 演示3: 列出目录内容");
+  console.log("📌 演示4: 列出目录内容");
   console.log("═══════════════════════════════════════════════════════════");
   await assistant.listFiles(".");
   await wait(2000);
@@ -103,7 +112,9 @@ async function demo() {
   console.log("\n═══════════════════════════════════════════════════════════");
   console.log("🎬 演示完成！");
   console.log("═══════════════════════════════════════════════════════════");
-  console.log('\n💡 提示: 运行 "pnpm start" 进入交互模式，亲自体验所有功能！\n');
+  console.log(
+    '\n💡 提示: 运行 "pnpm start" 进入交互模式，亲自体验所有功能！\n',
+  );
 }
 
 demo().catch(console.error);
