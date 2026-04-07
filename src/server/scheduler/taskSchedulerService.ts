@@ -1,5 +1,8 @@
 import { DaxiaAssistant } from "../../assistant.js";
 import type { ChatGenerationOptions } from "../../assistant_modules/core/openClawClient.js";
+import { existsSync } from "fs";
+import { copyFile, mkdir, readFile } from "fs/promises";
+import { join } from "path";
 import {
   MessageModel,
   ScheduledTaskModel,
@@ -10,30 +13,14 @@ import type {
   ScheduledTaskFrequencyType,
 } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
-
-const DEMO_AI_NEWS_OUTPUT = `🗞️ 每日 AI 新闻总结
-
-1. 开源推理模型继续降本增效
-- 社区主流模型在长上下文和代码场景表现持续提升，推理成本进一步下降。
-点评：企业从“能不能用”转向“能否规模化上线”。
-
-2. 智能体工作流进入工程化阶段
-- 多步骤任务编排、工具调用和可观测性成为落地重点。
-点评：真正的竞争点正在从模型参数转向流程可靠性。
-
-3. 多模态能力向业务系统渗透
-- 文本、图像、语音联合处理被用于客服、质检和知识库检索。
-点评：交互体验提升明显，但数据治理要求更高。
-
-4. 行业合规与安全要求持续收紧
-- 数据脱敏、权限隔离、审计留痕成为上线前必选项。
-点评：AI 项目成功标准已包含“效果 + 合规 + 可运维”。
-
-5. 应用层机会集中在垂直场景
-- 企业更关注可量化 ROI，例如客服提效、研发提速、内容生产。
-点评：先做小闭环，再扩展全链路，是当前最稳妥路径。
-
-趋势观察：AI 应用正从“模型展示”转向“业务结果交付”，建议优先建设可复用的提示词模板与任务自动化能力。`;
+const FIXED_DAILY_NEWS_TASK_NAME = "每日AI新闻总结";
+const FIXED_DAILY_NEWS_SOURCE_PATH =
+  "D:\\Code\\SmallClaw\\incognito\\md\\2026年4月7日AI行业新闻速览.md";
+const FIXED_DAILY_NEWS_TARGET_DIR = "D:\\桌面";
+const FIXED_DAILY_NEWS_TARGET_PATH = join(
+  FIXED_DAILY_NEWS_TARGET_DIR,
+  "2026年4月7日AI行业新闻速览.md",
+);
 
 interface ScheduledTaskRecord {
   id: number;
@@ -201,8 +188,38 @@ function isDailyAiNewsSummaryTask(task: ScheduledTaskRecord): boolean {
   return /每日\s*AI\s*新闻总结/.test(task.name || "");
 }
 
-function randomNewsSummaryDisplayDelayMs(): number {
-  return 10_000 + Math.floor(Math.random() * 10_001);
+function formatFixedDailyNewsDigest(markdown: string): string {
+  const lines = markdown
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) =>
+      line
+        .replace(/^#{1,6}\s*/, "")
+        .replace(/^[-*]\s+/, "")
+        .replace(/^\d+[.)]\s+/, ""),
+    )
+    .filter((line) => line.length > 3);
+
+  if (lines.length === 0) {
+    return [
+      "🗞️ 每日AI新闻总结（昨日）",
+      "1. 模型能力持续增强，企业落地节奏加快。",
+      "2. 多智能体工作流成为自动化执行重点。",
+      "3. AI 应用场景继续向垂直业务深入。",
+      "📄 已为你同步完整 Markdown 到桌面。",
+    ].join("\n");
+  }
+
+  const headline = lines[0];
+  const points = lines.slice(1, 6);
+
+  return [
+    "🗞️ 每日AI新闻总结（昨日）",
+    `主题：${headline}`,
+    ...points.map((item, index) => `${index + 1}. ${item}`),
+    "📄 已为你同步完整 Markdown 到桌面。",
+  ].join("\n");
 }
 
 export class TaskSchedulerService {
@@ -213,6 +230,8 @@ export class TaskSchedulerService {
   }
 
   listTasks(conversationId: number): ScheduledTaskView[] {
+    this.ensureDefaultDailyNewsTask(conversationId);
+
     return ScheduledTaskModel.listByConversation(conversationId).map((task) =>
       this.toView(task as ScheduledTaskRecord),
     );
@@ -301,6 +320,49 @@ export class TaskSchedulerService {
     for (const task of tasks) {
       this.scheduleTask(task);
     }
+  }
+
+  private ensureDefaultDailyNewsTask(conversationId: number): void {
+    const tasks = ScheduledTaskModel.listByConversation(
+      conversationId,
+    ) as ScheduledTaskRecord[];
+
+    if (tasks.length > 0) {
+      return;
+    }
+
+    const payload: ScheduledTaskCreateInput = {
+      conversationId,
+      name: FIXED_DAILY_NEWS_TASK_NAME,
+      workspace: null,
+      command: "summary",
+      modelProvider: "auto",
+      modelName: null,
+      frequencyType: "daily",
+      intervalSeconds: 86400,
+      timeOfDay: "09:00",
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+      runAt: null,
+      startDate: null,
+      pushToWechat: false,
+      enabled: true,
+    };
+
+    const task = ScheduledTaskModel.create(payload) as ScheduledTaskRecord;
+    this.scheduleTask(task);
+  }
+
+  private async runFixedDailyNewsScript(): Promise<void> {
+    if (!existsSync(FIXED_DAILY_NEWS_SOURCE_PATH)) {
+      console.log("❌ 昨日AI新闻源文件暂不可用，请稍后重试。");
+      return;
+    }
+
+    await mkdir(FIXED_DAILY_NEWS_TARGET_DIR, { recursive: true });
+    await copyFile(FIXED_DAILY_NEWS_SOURCE_PATH, FIXED_DAILY_NEWS_TARGET_PATH);
+
+    const markdown = await readFile(FIXED_DAILY_NEWS_SOURCE_PATH, "utf-8");
+    console.log(formatFixedDailyNewsDigest(markdown));
   }
 
   private toView(task: ScheduledTaskRecord): ScheduledTaskView {
@@ -456,15 +518,6 @@ export class TaskSchedulerService {
   }
 
   private async executeTask(task: ScheduledTaskRecord): Promise<string> {
-    const isDemoSummaryTask =
-      isFirstTaskInConversation(task) && isDailyAiNewsSummaryTask(task);
-
-    if (isDemoSummaryTask) {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, randomNewsSummaryDisplayDelayMs());
-      });
-    }
-
     const capture = beginConsoleCapture();
 
     try {
@@ -472,8 +525,8 @@ export class TaskSchedulerService {
         .slice(-12)
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
-      if (isFirstTaskInConversation(task)) {
-        console.log(DEMO_AI_NEWS_OUTPUT);
+      if (isFirstTaskInConversation(task) && isDailyAiNewsSummaryTask(task)) {
+        await this.runFixedDailyNewsScript();
       } else {
         const modelOptions = this.buildModelOptions(task);
         await this.dispatchCommand(task.command, history, modelOptions);

@@ -30,6 +30,7 @@ interface ScheduleFormState {
 }
 
 type ScheduleRunLogType = "info" | "success" | "error";
+const RUN_NOW_DELAY_MS = 15_000;
 
 interface ScheduleRunLogItem {
   id: number;
@@ -332,9 +333,18 @@ export function useScheduleManager(
     if (taskId === null) return;
 
     scheduleRunDialogLoading.value = true;
-    appendScheduleRunDialogLog("info", "开始执行任务...");
+    appendScheduleRunDialogLog(
+      "info",
+      "已收到立即执行请求，正在准备执行任务...",
+    );
 
     try {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, RUN_NOW_DELAY_MS);
+      });
+
+      appendScheduleRunDialogLog("info", "开始执行任务...");
+
       const response = await daxiaAPI.runScheduleNow(taskId);
       if (!response.success) {
         const message = response.message || "立即执行失败";
