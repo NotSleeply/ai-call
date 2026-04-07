@@ -53,7 +53,11 @@
       <!-- 顶部标题栏 -->
       <header class="h-14 border-b flex items-center px-6 bg-white">
         <h1 class="font-medium text-gray-800">{{ currentChat?.title || '大虾助手' }}</h1>
-        <div class="ml-auto">
+        <div class="ml-auto flex items-center gap-2">
+          <button @click="openSchedulePanel"
+            class="px-3 py-1.5 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors">
+            定时任务
+          </button>
           <button @click="openPanel"
             class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
             Skill 管理
@@ -407,12 +411,241 @@
         </section>
       </div>
     </div>
+
+    <div v-if="schedulePanelVisible" class="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4">
+      <div class="w-full max-w-5xl h-[88vh] rounded-3xl bg-[#ececef] shadow-2xl overflow-hidden flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-300 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-800">自动化任务</h3>
+          <button @click="refreshScheduleTasks" :disabled="scheduleLoading"
+            class="ml-auto px-3 py-1.5 text-sm rounded-full border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50">
+            {{ scheduleLoading ? '刷新中...' : '刷新列表' }}
+          </button>
+          <button @click="closeSchedulePanel"
+            class="px-3 py-1.5 text-sm rounded-full border border-slate-300 bg-white hover:bg-slate-100">
+            关闭
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div v-if="scheduleError" class="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+            {{ scheduleError }}
+          </div>
+
+          <section class="rounded-2xl bg-[#d4d4d8] p-5">
+            <h4 class="text-2xl font-semibold text-slate-800">添加自动化任务</h4>
+
+            <div class="mt-4 space-y-3">
+              <div>
+                <label class="text-sm text-slate-700">名称</label>
+                <input v-model="scheduleForm.name" type="text" placeholder="例如：每日 AI 新闻总结"
+                  class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+              </div>
+
+              <div>
+                <label class="text-sm text-slate-700">工作空间（可选）</label>
+                <input v-model="scheduleForm.workspace" type="text" placeholder="例如：产品组日报"
+                  class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+              </div>
+
+              <div>
+                <label class="text-sm text-slate-700">提示词</label>
+                <textarea v-model="scheduleForm.prompt" rows="4" placeholder="例如：请总结今天 AI 行业 5 条重点新闻，并给出简短点评。"
+                  class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="text-sm text-slate-700">模型提供方</label>
+                  <select v-model="scheduleForm.modelProvider"
+                    class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500">
+                    <option value="auto">Auto</option>
+                    <option value="api">API</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="ollama">Ollama</option>
+                  </select>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="text-sm text-slate-700">模型名（Auto 可留空）</label>
+                  <input v-model="scheduleForm.modelName" type="text" placeholder="例如：gpt-5-mini"
+                    :disabled="scheduleForm.modelProvider === 'auto'"
+                    class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-60" />
+                </div>
+              </div>
+
+              <div class="text-xs text-slate-600">当前选择：{{ scheduleModelDisplay }}</div>
+
+              <div>
+                <label class="text-sm text-slate-700">执行频率</label>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button @click="scheduleForm.frequencyType = 'daily'" type="button" :class="[
+                    'px-4 py-1.5 rounded-full text-sm border transition-colors',
+                    scheduleForm.frequencyType === 'daily'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-white/70 border-white/70 text-slate-700 hover:bg-white',
+                  ]">
+                    每天
+                  </button>
+                  <button @click="scheduleForm.frequencyType = 'interval'" type="button" :class="[
+                    'px-4 py-1.5 rounded-full text-sm border transition-colors',
+                    scheduleForm.frequencyType === 'interval'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-white/70 border-white/70 text-slate-700 hover:bg-white',
+                  ]">
+                    按间隔
+                  </button>
+                  <button @click="scheduleForm.frequencyType = 'once'" type="button" :class="[
+                    'px-4 py-1.5 rounded-full text-sm border transition-colors',
+                    scheduleForm.frequencyType === 'once'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-white/70 border-white/70 text-slate-700 hover:bg-white',
+                  ]">
+                    单次
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="scheduleForm.frequencyType === 'daily'" class="space-y-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-sm text-slate-700">执行时间</label>
+                    <input v-model="scheduleForm.timeOfDay" type="time"
+                      class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+                  </div>
+                  <div>
+                    <label class="text-sm text-slate-700">生效起始日期（可选）</label>
+                    <input v-model="scheduleForm.startDate" type="date"
+                      class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button v-for="weekday in scheduleWeekdayOptions" :key="weekday.value"
+                    @click="toggleScheduleWeekday(weekday.value)" type="button" :class="[
+                      'px-3 py-1 rounded-full text-sm border transition-colors',
+                      scheduleForm.weekdays.includes(weekday.value)
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white/70 text-slate-700 border-white/70 hover:bg-white',
+                    ]">
+                    {{ weekday.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-else-if="scheduleForm.frequencyType === 'interval'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-sm text-slate-700">执行间隔（分钟）</label>
+                  <input v-model.number="scheduleForm.intervalMinutes" type="number" min="1"
+                    class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+                </div>
+              </div>
+
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-sm text-slate-700">执行时间</label>
+                  <input v-model="scheduleForm.runAt" type="datetime-local"
+                    class="mt-1 w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+                </div>
+              </div>
+
+              <div class="flex justify-end gap-2 pt-2">
+                <button @click="resetScheduleForm" type="button"
+                  class="px-5 py-2 rounded-full border border-slate-300 bg-white hover:bg-slate-100 text-slate-700">
+                  取消
+                </button>
+                <button @click="handleCreateSchedule" :disabled="scheduleSaving || !scheduleCanSubmit"
+                  class="px-5 py-2 rounded-full bg-black text-white hover:bg-slate-900 disabled:opacity-50">
+                  {{ scheduleSaving ? '添加中...' : '添加' }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-2xl bg-white border border-slate-200 p-4">
+            <div class="flex items-center">
+              <h4 class="font-medium text-slate-800">任务列表</h4>
+            </div>
+
+            <div class="mt-3 space-y-2">
+              <div v-if="!scheduleLoading && scheduleTasks.length === 0" class="text-sm text-slate-500 px-2 py-3">
+                暂无自动化任务，先创建一个吧。
+              </div>
+
+              <div v-for="task in scheduleTasks" :key="task.id"
+                class="rounded-xl border border-slate-200 px-3 py-3 bg-slate-50">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-slate-800 truncate">#{{ task.id }} · {{ task.name }}</div>
+                    <div class="text-xs text-slate-500 mt-1">{{ taskScheduleText(task) }}</div>
+                    <div class="text-xs text-slate-500 mt-1">
+                      模型: {{ task.modelProvider === 'auto' ? 'Auto' : `${task.modelProvider}${task.modelName ?
+                        `:${task.modelName}` : ''}` }}
+                      <span v-if="task.workspace"> · 工作空间: {{ task.workspace }}</span>
+                    </div>
+                    <div class="text-sm text-slate-700 mt-2 whitespace-pre-wrap break-all">{{ task.command }}</div>
+                    <div class="text-xs text-slate-500 mt-1">
+                      状态: {{ task.enabled ? '启用' : '停用' }} · 上次执行: {{ task.lastRunAt ? formatTime(task.lastRunAt) :
+                        '未执行' }}
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button @click="handleRunScheduleNow(task.id)" :disabled="scheduleSaving"
+                      class="px-3 py-1.5 text-sm rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                      立即执行
+                    </button>
+                    <button @click="handleToggleSchedule(task.id, !task.enabled)" :disabled="scheduleSaving"
+                      class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-50">
+                      {{ task.enabled ? '停用' : '启用' }}
+                    </button>
+                    <button @click="toggleScheduleRuns(task.id)" :disabled="scheduleSaving"
+                      class="px-3 py-1.5 text-sm rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50">
+                      {{ expandedScheduleTaskId === task.id ? '收起历史' : '执行历史' }}
+                    </button>
+                    <button @click="handleDeleteSchedule(task.id)" :disabled="scheduleSaving"
+                      class="px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                      删除
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="expandedScheduleTaskId === task.id"
+                  class="mt-3 rounded-lg bg-white border border-slate-200 p-3">
+                  <div class="text-xs text-slate-500 mb-2">最近执行记录</div>
+
+                  <div v-if="scheduleRunsLoading[task.id]" class="text-sm text-slate-500">加载中...</div>
+
+                  <div v-else-if="!(scheduleRunsByTask[task.id]?.length)" class="text-sm text-slate-500">
+                    暂无执行记录。
+                  </div>
+
+                  <div v-else class="space-y-2 max-h-56 overflow-y-auto">
+                    <div v-for="run in scheduleRunsByTask[task.id]" :key="run.id"
+                      class="rounded-md border border-slate-200 bg-slate-50 p-2">
+                      <div class="text-xs text-slate-500">
+                        {{ formatTime(run.executedAt) }} · {{ run.success ? '成功' : '失败' }}
+                      </div>
+                      <div class="mt-1 text-xs text-slate-700 whitespace-pre-wrap">{{ run.output }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { daxiaAPI, type CommandResponse, type Skill } from './api/daxia'
+import {
+  daxiaAPI,
+  type CommandResponse,
+  type ScheduledTask,
+  type ScheduledTaskRun,
+  type Skill,
+} from './api/daxia'
 import { commandKeywords, quickCommands } from './features/chat/constants'
 import { useSkillManager } from './features/skills/composables/useSkillManager'
 import { renderMarkdown } from './features/chat/markdown'
@@ -432,6 +665,7 @@ const pendingLaunchUrl = ref<string | null>(null)
 
 type CraftMode = 'plan' | 'ask' | 'agent'
 type ModelProvider = 'auto' | 'deepseek' | 'api' | 'ollama'
+type ScheduleFrequencyType = 'daily' | 'interval' | 'once'
 
 interface SelectableModel {
   label: string
@@ -481,6 +715,38 @@ const commonModels: SelectableModel[] = [
 const customModelProvider = ref<Exclude<ModelProvider, 'auto'>>('api')
 const customModelName = ref('')
 const customModels = ref<SelectableModel[]>([])
+
+const scheduleWeekdayOptions: Array<{ value: number; label: string }> = [
+  { value: 1, label: '周一' },
+  { value: 2, label: '周二' },
+  { value: 3, label: '周三' },
+  { value: 4, label: '周四' },
+  { value: 5, label: '周五' },
+  { value: 6, label: '周六' },
+  { value: 7, label: '周日' },
+]
+
+const schedulePanelVisible = ref(false)
+const scheduleLoading = ref(false)
+const scheduleSaving = ref(false)
+const scheduleError = ref('')
+const scheduleTasks = ref<ScheduledTask[]>([])
+const scheduleForm = ref({
+  name: '',
+  workspace: '',
+  prompt: '',
+  modelProvider: 'auto' as ModelProvider,
+  modelName: '',
+  frequencyType: 'daily' as ScheduleFrequencyType,
+  intervalMinutes: 10,
+  timeOfDay: '09:00',
+  weekdays: [1, 2, 3, 4, 5, 6, 7] as number[],
+  runAt: '',
+  startDate: '',
+})
+const expandedScheduleTaskId = ref<number | null>(null)
+const scheduleRunsByTask = ref<Record<number, ScheduledTaskRun[]>>({})
+const scheduleRunsLoading = ref<Record<number, boolean>>({})
 
 const chatSelectedSkillId = ref('')
 const craftMenuOpen = ref(false)
@@ -535,6 +801,50 @@ const selectedModelDisplay = computed(() => {
   )
 
   return matched?.label || `${selectedModelProvider.value}:${selectedModelName.value}`
+})
+
+const scheduleModelDisplay = computed(() => {
+  if (scheduleForm.value.modelProvider === 'auto') {
+    return 'Auto'
+  }
+
+  const allOptions = [...commonModels, ...customModels.value]
+  const matched = allOptions.find(
+    (item) =>
+      item.provider === scheduleForm.value.modelProvider &&
+      item.modelName === scheduleForm.value.modelName,
+  )
+
+  return (
+    matched?.label ||
+    `${scheduleForm.value.modelProvider}:${scheduleForm.value.modelName || '默认模型'}`
+  )
+})
+
+const scheduleCanSubmit = computed(() => {
+  if (!scheduleForm.value.name.trim() || !scheduleForm.value.prompt.trim()) {
+    return false
+  }
+
+  if (
+    scheduleForm.value.modelProvider !== 'auto' &&
+    !scheduleForm.value.modelName.trim()
+  ) {
+    return false
+  }
+
+  if (scheduleForm.value.frequencyType === 'interval') {
+    return Number(scheduleForm.value.intervalMinutes) > 0
+  }
+
+  if (scheduleForm.value.frequencyType === 'daily') {
+    return (
+      /^(\d{1,2}):(\d{2})$/.test(scheduleForm.value.timeOfDay) &&
+      scheduleForm.value.weekdays.length > 0
+    )
+  }
+
+  return !!scheduleForm.value.runAt
 })
 
 const filteredChatSkills = computed(() => {
@@ -592,7 +902,256 @@ const { executeCommand, handleChat } = useCommandExecution(
 
 watch(currentChatId, () => {
   void loadMessages()
+  if (schedulePanelVisible.value) {
+    void refreshScheduleTasks()
+  }
 })
+
+function resetScheduleForm(): void {
+  scheduleForm.value = {
+    name: '',
+    workspace: '',
+    prompt: '',
+    modelProvider: selectedModelProvider.value,
+    modelName:
+      selectedModelProvider.value === 'auto'
+        ? ''
+        : selectedModelName.value,
+    frequencyType: 'daily',
+    intervalMinutes: 10,
+    timeOfDay: '09:00',
+    weekdays: [1, 2, 3, 4, 5, 6, 7],
+    runAt: '',
+    startDate: '',
+  }
+}
+
+function toggleScheduleWeekday(day: number): void {
+  if (scheduleForm.value.frequencyType !== 'daily') {
+    return
+  }
+
+  if (scheduleForm.value.weekdays.includes(day)) {
+    scheduleForm.value.weekdays = scheduleForm.value.weekdays.filter((item) => item !== day)
+  } else {
+    scheduleForm.value.weekdays = [...scheduleForm.value.weekdays, day].sort((a, b) => a - b)
+  }
+}
+
+function taskScheduleText(task: ScheduledTask): string {
+  if (task.frequencyType === 'interval') {
+    const minutes = Math.max(1, Math.round(task.intervalSeconds / 60))
+    return `按间隔 · 每 ${minutes} 分钟`
+  }
+
+  if (task.frequencyType === 'once') {
+    return `单次 · ${task.runAt ? formatTime(task.runAt) : '未设置时间'}`
+  }
+
+  const weekdays = task.weekdays
+    .map((day) => scheduleWeekdayOptions.find((item) => item.value === day)?.label)
+    .filter((value): value is string => !!value)
+    .join(' ')
+
+  return `每天 · ${task.timeOfDay || '09:00'}${weekdays ? ` · ${weekdays}` : ''}`
+}
+
+function openSchedulePanel(): void {
+  schedulePanelVisible.value = true
+  scheduleError.value = ''
+  resetScheduleForm()
+  void refreshScheduleTasks()
+}
+
+function closeSchedulePanel(): void {
+  schedulePanelVisible.value = false
+}
+
+async function refreshScheduleTasks(): Promise<void> {
+  scheduleLoading.value = true
+  scheduleError.value = ''
+
+  try {
+    scheduleTasks.value = await daxiaAPI.listSchedules(currentChatId.value)
+
+    if (
+      expandedScheduleTaskId.value !== null &&
+      !scheduleTasks.value.some((task) => task.id === expandedScheduleTaskId.value)
+    ) {
+      expandedScheduleTaskId.value = null
+    }
+
+    if (expandedScheduleTaskId.value !== null) {
+      await loadScheduleRuns(expandedScheduleTaskId.value)
+    }
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '获取定时任务失败'
+  } finally {
+    scheduleLoading.value = false
+  }
+}
+
+async function handleCreateSchedule(): Promise<void> {
+  if (!scheduleCanSubmit.value) {
+    scheduleError.value = '请先填写完整的任务信息'
+    return
+  }
+
+  scheduleSaving.value = true
+  scheduleError.value = ''
+
+  try {
+    const payload: {
+      conversationId: number
+      name: string
+      workspace?: string
+      prompt: string
+      modelProvider: ModelProvider
+      modelName?: string
+      frequencyType: ScheduleFrequencyType
+      intervalMinutes?: number
+      timeOfDay?: string
+      weekdays?: number[]
+      runAt?: string
+      startDate?: string
+    } = {
+      conversationId: currentChatId.value,
+      name: scheduleForm.value.name.trim(),
+      workspace: scheduleForm.value.workspace.trim() || undefined,
+      prompt: scheduleForm.value.prompt.trim(),
+      modelProvider: scheduleForm.value.modelProvider,
+      modelName:
+        scheduleForm.value.modelProvider === 'auto'
+          ? undefined
+          : scheduleForm.value.modelName.trim() || undefined,
+      frequencyType: scheduleForm.value.frequencyType,
+      startDate: scheduleForm.value.startDate || undefined,
+    }
+
+    if (scheduleForm.value.frequencyType === 'interval') {
+      payload.intervalMinutes = Math.max(1, Math.floor(Number(scheduleForm.value.intervalMinutes || 1)))
+    } else if (scheduleForm.value.frequencyType === 'daily') {
+      payload.timeOfDay = scheduleForm.value.timeOfDay
+      payload.weekdays = scheduleForm.value.weekdays
+    } else {
+      payload.runAt = scheduleForm.value.runAt
+    }
+
+    const response = await daxiaAPI.createSchedule(payload)
+
+    if (!response.success) {
+      scheduleError.value = response.message || '创建定时任务失败'
+      return
+    }
+
+    resetScheduleForm()
+    await refreshScheduleTasks()
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '创建定时任务失败'
+  } finally {
+    scheduleSaving.value = false
+  }
+}
+
+async function handleToggleSchedule(taskId: number, enabled: boolean): Promise<void> {
+  scheduleSaving.value = true
+  scheduleError.value = ''
+
+  try {
+    const response = await daxiaAPI.updateScheduleEnabled(taskId, enabled)
+    if (!response.success) {
+      scheduleError.value = response.message || '更新任务状态失败'
+      return
+    }
+    await refreshScheduleTasks()
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '更新任务状态失败'
+  } finally {
+    scheduleSaving.value = false
+  }
+}
+
+async function handleRunScheduleNow(taskId: number): Promise<void> {
+  scheduleSaving.value = true
+  scheduleError.value = ''
+
+  try {
+    const response = await daxiaAPI.runScheduleNow(taskId)
+    if (!response.success) {
+      scheduleError.value = response.message || '立即执行失败'
+      return
+    }
+
+    await loadMessages()
+    await loadChatList()
+    await refreshScheduleTasks()
+    await loadScheduleRuns(taskId)
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '立即执行失败'
+  } finally {
+    scheduleSaving.value = false
+  }
+}
+
+async function handleDeleteSchedule(taskId: number): Promise<void> {
+  if (!window.confirm('确认删除该定时任务吗？')) return
+
+  scheduleSaving.value = true
+  scheduleError.value = ''
+
+  try {
+    const response = await daxiaAPI.deleteSchedule(taskId)
+    if (!response.success) {
+      scheduleError.value = response.message || '删除定时任务失败'
+      return
+    }
+
+    if (expandedScheduleTaskId.value === taskId) {
+      expandedScheduleTaskId.value = null
+    }
+
+    delete scheduleRunsByTask.value[taskId]
+    delete scheduleRunsLoading.value[taskId]
+
+    await refreshScheduleTasks()
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '删除定时任务失败'
+  } finally {
+    scheduleSaving.value = false
+  }
+}
+
+async function loadScheduleRuns(taskId: number): Promise<void> {
+  scheduleRunsLoading.value[taskId] = true
+
+  try {
+    const runs = await daxiaAPI.listScheduleRuns(taskId, 20)
+    scheduleRunsByTask.value[taskId] = runs
+  } catch (error) {
+    scheduleError.value =
+      error instanceof Error ? error.message : '获取执行历史失败'
+  } finally {
+    scheduleRunsLoading.value[taskId] = false
+  }
+}
+
+function toggleScheduleRuns(taskId: number): void {
+  if (expandedScheduleTaskId.value === taskId) {
+    expandedScheduleTaskId.value = null
+    return
+  }
+
+  expandedScheduleTaskId.value = taskId
+
+  if (!scheduleRunsByTask.value[taskId]) {
+    void loadScheduleRuns(taskId)
+  }
+}
 
 async function sendMessage(): Promise<void> {
   const text = inputText.value.trim()

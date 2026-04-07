@@ -41,3 +41,50 @@ export interface Skill {
 export interface SkillRunResult {
   output: string;
 }
+
+export type ModelProvider = "auto" | "deepseek" | "api" | "ollama";
+export type ScheduleFrequencyType = "daily" | "interval" | "once";
+
+export interface ScheduledTask {
+  id: number;
+  conversationId: number;
+  name: string;
+  workspace?: string | null;
+  command: string;
+  modelProvider: ModelProvider;
+  modelName?: string | null;
+  frequencyType: ScheduleFrequencyType;
+  intervalSeconds: number;
+  timeOfDay?: string | null;
+  weekdays: number[];
+  runAt?: string | null;
+  startDate?: string | null;
+  pushToWechat: boolean;
+  enabled: boolean;
+  createdAt: string;
+  lastRunAt?: string | null;
+}
+
+export interface CreateSchedulePayload {
+  conversationId: number;
+  name: string;
+  workspace?: string;
+  prompt: string;
+  modelProvider: ModelProvider;
+  modelName?: string;
+  frequencyType: ScheduleFrequencyType;
+  intervalMinutes?: number;
+  timeOfDay?: string;
+  weekdays?: number[];
+  runAt?: string;
+  startDate?: string;
+  pushToWechat?: boolean;
+}
+
+export interface ScheduledTaskRun {
+  id: number;
+  taskId: number;
+  success: boolean;
+  output: string;
+  executedAt: string;
+}

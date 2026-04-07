@@ -226,6 +226,7 @@ class DaxiaDemo {
       email: "获取邮件",
       summary: "生成总结",
       agents: "多Agent协同",
+      schedule: "配置定时任务",
       "2048": "生成2048游戏",
     };
 
@@ -319,6 +320,12 @@ class DaxiaDemo {
         output = await this.captureOutput(async () => {
           await this.assistant.runMultiAgentCollaboration(args.join(" "));
         });
+        this.saveAssistantMessage(output);
+        break;
+      case "schedule":
+        output =
+          "⏰ 定时任务目前通过 Web/API 端配置，请在聊天中输入: schedule help";
+        console.log(output);
         this.saveAssistantMessage(output);
         break;
       case "2048":

@@ -28,6 +28,7 @@ const HELP_TEXT = `
 │  email                   总结邮件                           │
 │  summary                 生成对话总结（Markdown格式）       │
 │  agents [任务]           多Agent协同完成任务演示            │
+│  schedule <子命令>       配置定时任务（add/list/on/off）     │
 │  skill <子命令>          配置/添加/运行自定义Skill          │
 │  Auto/模型选择            通过 .env 配置 API 与 DeepSeek      │
 │  ollama <问题>           使用本地Ollama回答问题             │

@@ -13,6 +13,15 @@ export function resolveCommandKey(rawCommand: string): string {
     /(生成|打开|玩|做|来个|小游戏|play|create|make|build|start|game)/i.test(
       rawCommand,
     );
+  const isScheduleIntent =
+    firstToken === "schedule" ||
+    firstToken === "cron" ||
+    firstToken === "timer" ||
+    firstToken === "定时" ||
+    firstToken === "定时任务" ||
+    /(定时任务|定时执行|每隔\s*\d+\s*秒|cron\s+add|schedule\s+add)/i.test(
+      rawCommand,
+    );
 
   if (isMultiAgentIntent) {
     return "agents";
@@ -20,6 +29,10 @@ export function resolveCommandKey(rawCommand: string): string {
 
   if (firstToken === "2048" || is2048Intent) {
     return "2048";
+  }
+
+  if (isScheduleIntent) {
+    return "schedule";
   }
 
   return firstToken;

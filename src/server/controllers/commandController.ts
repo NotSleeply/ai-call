@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { DaxiaAssistant } from "../../assistant.js";
 import { ConversationModel, MessageModel } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
+import { TaskSchedulerService } from "../scheduler/taskSchedulerService.js";
 import { ModuleSkillRunner } from "../skills/moduleSkillRunner.js";
 import { SkillStore } from "../skills/skillStore.js";
 
@@ -34,6 +35,7 @@ function beginConsoleCapture(): {
 
 export function createCommandHandler(
   assistant: DaxiaAssistant,
+  scheduler: TaskSchedulerService,
   publicServerOrigin: string,
 ) {
   const skillStore = new SkillStore();
@@ -107,6 +109,129 @@ export function createCommandHandler(
         }
       } else {
         switch (resolveCommandKey(effectiveCommand)) {
+          case "schedule": {
+            const scheduleText = effectiveCommand
+              .replace(/^(schedule|cron|timer|定时任务|定时)\s*/i, "")
+              .trim();
+
+            if (!scheduleText || /^(help|h|帮助)$/i.test(scheduleText)) {
+              console.log("⏰ 定时任务命令:");
+              console.log("1) schedule add <秒> <命令>");
+              console.log("2) schedule list");
+              console.log("3) schedule run <任务ID>");
+              console.log("4) schedule on <任务ID>");
+              console.log("5) schedule off <任务ID>");
+              console.log("6) schedule del <任务ID>");
+              console.log("示例: schedule add 600 weather");
+              break;
+            }
+
+            if (/^(list|ls|列表)$/i.test(scheduleText)) {
+              const tasks = scheduler.listTasks(convId);
+              if (tasks.length === 0) {
+                console.log("📭 当前会话还没有定时任务");
+                break;
+              }
+
+              console.log("⏰ 当前会话定时任务列表:");
+              for (const task of tasks) {
+                const status = task.enabled ? "启用" : "停用";
+                const lastRun = task.lastRunAt || "未执行";
+                console.log(
+                  `#${task.id} [${status}] 每 ${task.intervalSeconds}s -> ${task.command} (上次执行: ${lastRun})`,
+                );
+              }
+              break;
+            }
+
+            const addMatch = scheduleText.match(
+              /^(add|新增)\s+(\d+)\s+([\s\S]+)$/i,
+            );
+            if (addMatch) {
+              const intervalSeconds = Number.parseInt(addMatch[2], 10);
+              const taskCommand = addMatch[3].trim();
+
+              if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+                console.log("❌ 秒数必须是大于 0 的整数");
+                break;
+              }
+
+              if (!taskCommand) {
+                console.log("❌ 定时任务命令不能为空");
+                break;
+              }
+
+              if (resolveCommandKey(taskCommand) === "schedule") {
+                console.log("❌ 不支持在定时任务中嵌套 schedule 命令");
+                break;
+              }
+
+              const task = scheduler.addTask({
+                conversationId: convId,
+                name: taskCommand.slice(0, 24),
+                command: taskCommand,
+                modelProvider: "auto",
+                frequencyType: "interval",
+                intervalSeconds,
+                enabled: true,
+              });
+              console.log(
+                `✅ 已创建定时任务 #${task.id}: 每 ${task.intervalSeconds}s 执行 ${task.command}`,
+              );
+              break;
+            }
+
+            const runMatch = scheduleText.match(/^(run|执行)\s+(\d+)$/i);
+            if (runMatch) {
+              const taskId = Number.parseInt(runMatch[2], 10);
+              const output = await scheduler.runTaskNow(taskId);
+              console.log(output);
+              break;
+            }
+
+            const onMatch = scheduleText.match(/^(on|启用|开启)\s+(\d+)$/i);
+            if (onMatch) {
+              const taskId = Number.parseInt(onMatch[2], 10);
+              const updated = scheduler.setTaskEnabled(taskId, true);
+              if (!updated) {
+                console.log(`❌ 未找到定时任务 #${taskId}`);
+                break;
+              }
+              console.log(`✅ 已启用定时任务 #${updated.id}`);
+              break;
+            }
+
+            const offMatch = scheduleText.match(
+              /^(off|禁用|关闭|停用)\s+(\d+)$/i,
+            );
+            if (offMatch) {
+              const taskId = Number.parseInt(offMatch[2], 10);
+              const updated = scheduler.setTaskEnabled(taskId, false);
+              if (!updated) {
+                console.log(`❌ 未找到定时任务 #${taskId}`);
+                break;
+              }
+              console.log(`✅ 已停用定时任务 #${updated.id}`);
+              break;
+            }
+
+            const delMatch = scheduleText.match(
+              /^(del|delete|remove|删除)\s+(\d+)$/i,
+            );
+            if (delMatch) {
+              const taskId = Number.parseInt(delMatch[2], 10);
+              const deleted = scheduler.deleteTask(taskId);
+              if (!deleted) {
+                console.log(`❌ 未找到定时任务 #${taskId}`);
+                break;
+              }
+              console.log(`🗑️ 已删除定时任务 #${taskId}`);
+              break;
+            }
+
+            console.log("❌ 无效的定时任务命令，输入 schedule help 查看帮助");
+            break;
+          }
           case "agents": {
             const task = effectiveCommand
               .replace(/^(agents|multiagent|swarm)\s*/i, "")
