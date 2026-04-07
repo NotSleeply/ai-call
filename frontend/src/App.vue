@@ -121,193 +121,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-import { daxiaAPI, type Conversation, type Message, type CommandResponse } from './api/daxia'
+import { onMounted, ref, watch } from 'vue'
+import { daxiaAPI, type CommandResponse } from './api/daxia'
+import { commandKeywords, quickCommands } from './features/chat/constants'
+import { renderMarkdown } from './features/chat/markdown'
+import { useCommandExecution } from './features/chat/composables/useCommandExecution'
+import { useConversationState } from './features/chat/composables/useConversationState'
+import { useLoadingState } from './features/chat/composables/useLoadingState'
+import {
+  formatTime,
+  isLaunchCancel,
+  isLaunchConfirm,
+  wait,
+} from './features/chat/utils'
 
 const isConnected = ref(false)
-const loading = ref(false)
-const loadingText = ref('')
-const loadingPhase = ref('')
 const inputText = ref('')
-const currentChatId = ref(1)
-const messageListRef = ref<HTMLElement | null>(null)
 const pendingLaunchUrl = ref<string | null>(null)
 
-const loadingPhases = [
-  '正在与助手同步上下文...',
-  '正在组织回复内容...',
-  '正在润色输出格式...',
-]
-let loadingPhaseTimer: number | null = null
+const {
+  loading,
+  loadingText,
+  loadingPhase,
+  startLoadingState,
+  stopLoadingState,
+} = useLoadingState()
 
-function wait(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+const {
+  chatList,
+  messages,
+  currentChatId,
+  currentChat,
+  messageListRef,
+  scrollToBottom,
+  loadChatList,
+  loadMessages,
+  createNewChat,
+  selectChat,
+  deleteChat,
+  appendLocalMessage,
+} = useConversationState()
 
-function startLoadingState(baseText: string) {
-  loading.value = true
-  loadingText.value = baseText
-  loadingPhase.value = loadingPhases[0]
+const { executeCommand, handleChat } = useCommandExecution(
+  currentChatId,
+  { startLoadingState, stopLoadingState },
+  { scrollToBottom },
+)
 
-  let phaseIndex = 0
-  loadingPhaseTimer = window.setInterval(() => {
-    phaseIndex = (phaseIndex + 1) % loadingPhases.length
-    loadingPhase.value = loadingPhases[phaseIndex]
-  }, 1200)
-}
-
-function stopLoadingState() {
-  if (loadingPhaseTimer) {
-    clearInterval(loadingPhaseTimer)
-    loadingPhaseTimer = null
-  }
-  loading.value = false
-}
-
-const chatList = ref<Conversation[]>([])
-const messages = ref<Message[]>([])
-
-const currentChat = computed(() => chatList.value.find(c => c.id === currentChatId.value))
-
-const quickCommands = [
-  { name: 'weather', label: '天气', icon: '🌤️' },
-  { name: 'news', label: '新闻', icon: '📰' },
-  { name: 'email', label: '邮件', icon: '📧' },
-  { name: 'wx', label: '微信', icon: '💬' },
-  { name: 'summary', label: '总结', icon: '📝' },
-  { name: '2048', label: '2048', icon: '🎮' },
-  { name: 'help', label: '帮助', icon: '❓' },
-]
-
-const commandConfig: Record<string, { loading: string }> = {
-  weather: { loading: '正在获取天气信息...' },
-  news: { loading: '正在获取新闻...' },
-  email: { loading: '正在获取邮件...' },
-  summary: { loading: '正在生成总结...' },
-  wx: { loading: '正在连接微信...' },
-  analyze: { loading: '正在分析项目...' },
-  help: { loading: '获取帮助信息...' },
-  '2048': { loading: '正在生成2048游戏...' },
-}
-
-marked.setOptions({
-  gfm: true,
-  breaks: true,
-})
-
-function renderMarkdown(content: string): string {
-  const parsed = marked.parse(content)
-  const html = typeof parsed === 'string' ? parsed : ''
-  return DOMPurify.sanitize(html)
-}
-
-function isLaunchConfirm(text: string): boolean {
-  return /^(启动|开始|打开|start|open|go)$/i.test(text.trim())
-}
-
-function isLaunchCancel(text: string): boolean {
-  return /^(取消|不用|不启动|不要|算了|cancel|no)$/i.test(text.trim())
-}
-
-function appendLocalMessage(role: 'user' | 'assistant', content: string) {
-  messages.value.push({
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    conversation_id: currentChatId.value,
-    role,
-    content,
-    created_at: new Date().toISOString(),
-  })
-  scrollToBottom()
-}
-
-// 格式化时间
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return date.toLocaleDateString('zh-CN')
-}
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (messageListRef.value) {
-      messageListRef.value.scrollTop = messageListRef.value.scrollHeight
-    }
-  })
-}
-
-// 加载对话列表
-async function loadChatList() {
-  try {
-    chatList.value = await daxiaAPI.getConversations()
-    if (chatList.value.length > 0 && !chatList.value.find(c => c.id === currentChatId.value)) {
-      currentChatId.value = chatList.value[0].id
-    }
-  } catch (error) {
-    console.error('加载对话列表失败:', error)
-  }
-}
-
-// 加载对话消息
-async function loadMessages() {
-  if (!currentChatId.value) return
-
-  try {
-    const conv = await daxiaAPI.getConversation(currentChatId.value)
-    messages.value = conv.messages || []
-    scrollToBottom()
-  } catch (error) {
-    console.error('加载消息失败:', error)
-    messages.value = []
-  }
-}
-
-// 监听对话切换
 watch(currentChatId, () => {
-  loadMessages()
+  void loadMessages()
 })
 
-async function createNewChat() {
-  try {
-    const conv = await daxiaAPI.createConversation()
-    chatList.value.unshift(conv)
-    currentChatId.value = conv.id
-    messages.value = []
-  } catch (error) {
-    console.error('创建对话失败:', error)
-  }
-}
-
-function selectChat(id: number) {
-  currentChatId.value = id
-}
-
-async function deleteChat(id: number) {
-  if (!confirm('确定要删除这个对话吗？')) return
-
-  try {
-    await daxiaAPI.deleteConversation(id)
-    chatList.value = chatList.value.filter(c => c.id !== id)
-
-    if (currentChatId.value === id) {
-      if (chatList.value.length > 0) {
-        currentChatId.value = chatList.value[0].id
-      } else {
-        await createNewChat()
-      }
-    }
-  } catch (error) {
-    console.error('删除对话失败:', error)
-  }
-}
-
-async function sendMessage() {
+async function sendMessage(): Promise<void> {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
@@ -319,10 +184,9 @@ async function sendMessage() {
     const launchUrl = pendingLaunchUrl.value
     pendingLaunchUrl.value = null
 
-    // 先正常显示“分析/思考”加载框
     startLoadingState('正在分析启动请求...')
     const startTime = Date.now()
-    const minAnalyzeDuration = 1800 + Math.random() * 1200 // 1.8-3s
+    const minAnalyzeDuration = 1800 + Math.random() * 1200
 
     try {
       const elapsed = Date.now() - startTime
@@ -336,7 +200,6 @@ async function sendMessage() {
 
     appendLocalMessage('assistant', '🚀 已启动成功，正在为你打开 2048...')
 
-    // 使用 setTimeout：3 秒后再执行打开
     await new Promise<void>((resolve) => {
       setTimeout(() => {
         const newTab = window.open(launchUrl, '_blank')
@@ -358,89 +221,42 @@ async function sendMessage() {
   }
 
   inputText.value = ''
-  let response: CommandResponse | null = null
+  const firstToken = text.split(' ')[0]
+  const isCommand = commandKeywords.has(firstToken)
 
-  // 判断是否是命令
-  const isCommand = ['weather', 'news', 'email', 'summary', 'wx', 'analyze', 'help', 'read', 'write', 'list', 'search', 'exec', '2048'].includes(text.split(' ')[0])
+  let response: CommandResponse | null = null
 
   if (isCommand) {
     response = await executeCommand(text)
   } else {
-    // 普通对话
     response = await handleChat(text)
   }
 
-  // 刷新消息列表
+  if (response?.success) {
+    isConnected.value = true
+  }
+
   await loadMessages()
   await loadChatList()
 
-  // 严格顺序：生成完成 -> 刷新消息 -> 最后等待用户确认启动
   if (response?.success && response.openUrl) {
     pendingLaunchUrl.value = response.openUrl
   }
 }
 
-async function sendQuickCommand(command: string) {
+async function sendQuickCommand(command: string): Promise<void> {
   inputText.value = command
   await sendMessage()
 }
 
-async function executeCommand(command: string): Promise<CommandResponse | null> {
-  const cmd = command.split(' ')[0]
-  const config = commandConfig[cmd] || { loading: '执行中...' }
-  startLoadingState(config.loading)
-
-  const startTime = Date.now()
-  const minDuration = 2600 + Math.random() * 3200 // 2.6-5.8秒随机等待
-  let response: CommandResponse | null = null
-
-  try {
-    response = await daxiaAPI.executeCommand(command, currentChatId.value)
-    isConnected.value = true
-  } catch (error: any) {
-    console.error('执行命令失败:', error)
-  } finally {
-    // 确保至少显示最小等待时间
-    const elapsed = Date.now() - startTime
-    if (elapsed < minDuration) {
-      await wait(minDuration - elapsed)
-    }
-    stopLoadingState()
-    scrollToBottom()
-  }
-
-  return response
-}
-
-async function handleChat(text: string): Promise<CommandResponse | null> {
-  startLoadingState('思考中...')
-
-  const startTime = Date.now()
-  const minDuration = 2200 + Math.random() * 2800 // 2.2-5秒随机等待
-  let response: CommandResponse | null = null
-
-  try {
-    response = await daxiaAPI.executeCommand(text, currentChatId.value)
-  } catch (error: any) {
-    console.error('对话失败:', error)
-  } finally {
-    // 确保至少显示最小等待时间
-    const elapsed = Date.now() - startTime
-    if (elapsed < minDuration) {
-      await wait(minDuration - elapsed)
-    }
-    stopLoadingState()
-    scrollToBottom()
-  }
-
-  return response
-}
-
-// 启动时检测连接状态并加载数据
 onMounted(async () => {
   isConnected.value = await daxiaAPI.healthCheck()
   await loadChatList()
   await loadMessages()
+
+  if (messageListRef.value) {
+    scrollToBottom()
+  }
 })
 </script>
 
