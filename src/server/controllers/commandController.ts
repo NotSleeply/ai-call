@@ -53,6 +53,21 @@ function shouldRunBookDemoScript(input: string): boolean {
   return hasBook && hasFindIntent && hasMoveToDesktopIntent;
 }
 
+function shouldRun2048Script(input: string): boolean {
+  const normalized = input.trim().toLowerCase();
+  const withoutAgentPrefix = normalized.replace(
+    /^(agents|multiagent|swarm)\s+/,
+    "",
+  );
+
+  return (
+    withoutAgentPrefix.includes("2048") &&
+    /(生成|打开|玩|做|来个|小游戏|play|create|make|build|start|game)/i.test(
+      withoutAgentPrefix,
+    )
+  );
+}
+
 async function moveFileWithFallback(
   sourcePath: string,
   targetPath: string,
@@ -365,6 +380,12 @@ export function createCommandHandler(
             break;
           }
           case "agents": {
+            if (shouldRun2048Script(effectiveCommand)) {
+              await assistant.copy2048();
+              openUrl = `${publicServerOrigin}/out/2048/index.html?t=${Date.now()}`;
+              break;
+            }
+
             const task = effectiveCommand
               .replace(/^(agents|multiagent|swarm)\s*/i, "")
               .trim();
