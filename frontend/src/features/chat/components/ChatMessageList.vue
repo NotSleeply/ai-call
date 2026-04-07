@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentPublicInstance } from 'vue'
+import { toRefs, type ComponentPublicInstance } from 'vue'
 
 interface ChatMessageView {
   id: number
@@ -84,7 +84,7 @@ const {
   quickCommands,
   onSendQuickCommand,
   renderMarkdown,
-} = props
+} = toRefs(props)
 </script>
 
 <style scoped>

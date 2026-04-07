@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentPublicInstance } from 'vue'
+import { toRefs, type ComponentPublicInstance } from 'vue'
 import type { Skill } from '../../../api/daxia'
 import ChatToolbarMenus from './ChatToolbarMenus.vue'
 import type { SelectableModel } from '../composables/useModelSelection'
@@ -110,5 +110,5 @@ const {
   onToggleSkillMenu,
   onSkillSearchKeywordChange,
   onChooseChatSkill,
-} = props
+} = toRefs(props)
 </script>
