@@ -77,7 +77,7 @@ pnpm install && pnpm run build
 cd frontend && pnpm install && cd ..   # 仅Web模式需要
 ```
 
-### 配置 DeepSeek（用于非命令对话）
+### 配置 DeepSeek / Ollama（用于智能对话）
 
 编辑项目根目录的 `.env`（可从 `.env.example` 复制）：
 
@@ -85,9 +85,16 @@ cd frontend && pnpm install && cd ..   # 仅Web模式需要
 DEEPSEEK_API_KEY=你的DeepSeekKey
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_BASE_URL=https://api.deepseek.com
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODEL=
 ```
 
-说明：非命令问题（例如直接输入自然语言）会调用 DeepSeek，openclaw 人设 prompt 固定写在代码中，不从 `.env` 读取。
+说明：
+
+- 普通对话优先调用 DeepSeek，失败时自动回退到本地 Ollama。
+- 如未配置 DeepSeek，也可直接依赖 Ollama（需本机已安装并启动 `ollama serve`，且至少拉取一个模型）。
+- 你也可以通过 `ollama <问题>` 强制走 Ollama，例如：`ollama 解释一下 TypeScript 泛型`。
+- openclaw 人设 prompt 固定写在代码中，不从 `.env` 读取。
 
 ### CLI 模式
 
@@ -120,6 +127,7 @@ pnpm run web
 | `news` | 总结新闻 | `news` |
 | `email` | 总结邮件 | `email` |
 | `summary` | 生成对话总结 | `summary` |
+| `ollama <问题>` | 使用本地 Ollama 回答 | `ollama 你好，请介绍你自己` |
 | `exit` | 退出程序 | `exit` |
 
 ## 演示场景

@@ -7,6 +7,10 @@ interface ChatMessage {
   content: string;
 }
 
+interface OllamaTagsResponse {
+  models?: Array<{ name?: string }>;
+}
+
 const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 AI 智能体（Agent）。
 
 你的任务是根据用户的自然语言指令，自主规划步骤、调用工具、执行操作，并完成真实任务。
@@ -46,6 +50,10 @@ export class OpenClawClient {
   private readonly deepSeekBaseUrl =
     (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").trim() ||
     "https://api.deepseek.com";
+  private readonly ollamaHost =
+    (process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || "").trim() ||
+    "http://127.0.0.1:11434";
+  private readonly ollamaModel = (process.env.OLLAMA_MODEL || "").trim();
   private readonly openClawSystemPrompt = DEFAULT_OPENCLAW_SYSTEM_PROMPT;
 
   private isDeepSeekEnabled(): boolean {
@@ -83,6 +91,89 @@ export class OpenClawClient {
           msg.content.trim().length > 0,
       )
       .slice(-12);
+  }
+
+  private resolveOllamaEndpoints(): string[] {
+    const normalized = this.ollamaHost.replace(/\/+$/, "");
+    const defaults = [
+      normalized,
+      "http://127.0.0.1:11434",
+      "http://localhost:11434",
+    ];
+    return [...new Set(defaults)];
+  }
+
+  private async resolveOllamaModel(endpoint: string): Promise<string> {
+    if (this.ollamaModel) {
+      return this.ollamaModel;
+    }
+
+    const response = await fetch(`${endpoint}/api/tags`);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(
+        `读取 Ollama 模型列表失败: HTTP ${response.status} ${response.statusText}: ${errText}`,
+      );
+    }
+
+    const tags = (await response.json()) as OllamaTagsResponse;
+    const model = tags.models?.[0]?.name?.trim();
+
+    if (!model) {
+      throw new Error(
+        "未检测到本地 Ollama 模型，请先执行例如: ollama pull llama3.2",
+      );
+    }
+
+    return model;
+  }
+
+  private async requestOllama(messages: ChatMessage[]): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveOllamaEndpoints()) {
+      try {
+        const model = await this.resolveOllamaModel(endpoint);
+        const response = await fetch(`${endpoint}/api/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            stream: false,
+            messages,
+            options: {
+              temperature: 0.7,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        const data = (await response.json()) as {
+          message?: { content?: string };
+          error?: string;
+        };
+
+        const content = data.message?.content?.trim();
+
+        if (content) {
+          return content;
+        }
+
+        lastError = data.error || "Ollama 返回了空内容";
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    throw new Error(lastError || "Ollama 请求失败");
   }
 
   private async requestDeepSeek(messages: ChatMessage[]): Promise<string> {
@@ -134,14 +225,16 @@ export class OpenClawClient {
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
   ): Promise<string> {
-    const question = userInput.trim();
+    const rawQuestion = userInput.trim();
+    const forceOllama = /^ollama[\s:]+/i.test(rawQuestion);
+    const question = forceOllama
+      ? rawQuestion.replace(/^ollama[\s:]+/i, "").trim()
+      : rawQuestion;
 
     if (!question) {
-      return "请告诉我你想问什么。";
-    }
-
-    if (!this.isDeepSeekEnabled()) {
-      return "未检测到 DeepSeek API Key。请先在 .env 中配置 DEEPSEEK_API_KEY。";
+      return forceOllama
+        ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
+        : "请告诉我你想问什么。";
     }
 
     const normalizedHistory =
@@ -155,11 +248,31 @@ export class OpenClawClient {
       { role: "user", content: question },
     ];
 
+    if (forceOllama) {
+      try {
+        return await this.requestOllama(messages);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return `Ollama 调用失败：${msg}`;
+      }
+    }
+
+    if (this.isDeepSeekEnabled()) {
+      try {
+        return await this.requestDeepSeek(messages);
+      } catch {
+        // DeepSeek 失败时回退 Ollama
+      }
+    }
+
     try {
-      return await this.requestDeepSeek(messages);
+      return await this.requestOllama(messages);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      return `DeepSeek 调用失败：${msg}`;
+      if (!this.isDeepSeekEnabled()) {
+        return `未检测到 DeepSeek API Key，且 Ollama 调用失败：${msg}`;
+      }
+      return `DeepSeek 与 Ollama 均调用失败：${msg}`;
     }
   }
 }
