@@ -197,6 +197,10 @@ function isFirstTaskInConversation(task: ScheduledTaskRecord): boolean {
   return task.id === firstId;
 }
 
+function isDailyAiNewsSummaryTask(task: ScheduledTaskRecord): boolean {
+  return /每日\s*AI\s*新闻总结/.test(task.name || "");
+}
+
 export class TaskSchedulerService {
   private readonly timers = new Map<number, NodeJS.Timeout>();
 
@@ -456,6 +460,13 @@ export class TaskSchedulerService {
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
       if (isFirstTaskInConversation(task)) {
+        if (isDailyAiNewsSummaryTask(task)) {
+          const delayMs = 10_000 + Math.floor(Math.random() * 10_001);
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, delayMs);
+          });
+        }
+
         console.log(DEMO_AI_NEWS_OUTPUT);
       } else {
         const modelOptions = this.buildModelOptions(task);
