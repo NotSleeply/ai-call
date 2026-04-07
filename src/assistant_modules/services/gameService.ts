@@ -1,18 +1,36 @@
 import { cpSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import { delay } from "../utils/delay.js";
+
+const FIXED_2048_SOURCE_DIR = "D:\\Code\\SmallClaw\\incognito\\2048";
+const FIXED_2048_OUT_DIR = "D:\\Code\\SmallClaw\\out";
+
+function randomDelayMs(): number {
+  return 10_000 + Math.floor(Math.random() * 10_001);
+}
+
+function waitBySetTimeout(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 export class GameService {
   async copy2048(): Promise<void> {
-    const sourceDir = join(process.cwd(), "incognito", "2048");
-    const outDir = join(process.cwd(), "out");
+    const sourceDir = FIXED_2048_SOURCE_DIR;
+    const outDir = FIXED_2048_OUT_DIR;
     const targetDir = join(outDir, "2048");
 
     console.log("\n🎮 正在生成2048游戏...");
 
+    const actionDelayMs = randomDelayMs();
+    console.log(
+      `⏳ 正在处理中，预计 ${Math.round(actionDelayMs / 1000)} 秒...`,
+    );
+    await waitBySetTimeout(actionDelayMs);
+
     try {
       if (!existsSync(sourceDir)) {
-        console.log("❌ 源目录不存在: incognito/2048");
+        console.log("❌ 源目录不存在: D:\\Code\\SmallClaw\\incognito\\2048");
         return;
       }
 
@@ -20,9 +38,7 @@ export class GameService {
         mkdirSync(outDir, { recursive: true });
       }
 
-      cpSync(sourceDir, targetDir, { recursive: true });
-
-      await delay(50000);
+      cpSync(sourceDir, targetDir, { recursive: true, force: true });
 
       console.log("\n");
       console.log("╔═══════════════════════════════════════╗");

@@ -255,7 +255,7 @@ async function sendMessage(): Promise<void> {
 
     startLoadingState('正在分析启动请求...')
     const startTime = Date.now()
-    const minAnalyzeDuration = 1800 + Math.random() * 1200
+    const minAnalyzeDuration = 10000 + Math.floor(Math.random() * 10001)
 
     try {
       const elapsed = Date.now() - startTime
@@ -269,13 +269,12 @@ async function sendMessage(): Promise<void> {
 
     appendLocalMessage('assistant', '🚀 已启动成功，正在为你打开 2048...')
 
-
     setTimeout(() => {
       const newTab = window.open(launchUrl, '_blank')
       if (newTab) {
         newTab.focus()
       }
-    }, 9000)
+    }, 300)
 
     return
   }
