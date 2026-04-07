@@ -89,7 +89,7 @@ pnpm start
 pnpm run web
 ```
 
-访问 http://localhost:3000
+访问 <http://localhost:3000>
 
 ## 可用命令
 
@@ -332,6 +332,7 @@ pnpm run web
 ```
 
 **生成的文件特性**:
+
 - 📁 文件名包含时间戳，格式: `conversation-summary-YYYY-MM-DDTHH-MM-SS.md`
 - 💾 自动保存到当前工作目录
 - 📊 包含完整的统计数据、表格、代码块等Markdown元素
