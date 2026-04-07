@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 import express, { Request, Response } from "express";
 import cors from "cors";
+import { join } from "path";
 import { DaxiaAssistant } from "./assistant.js";
 import { ConversationModel, MessageModel } from "./database.js";
 
 const app = express();
 const PORT = 3001;
+const PUBLIC_SERVER_ORIGIN = (
+  process.env.PUBLIC_SERVER_ORIGIN || `http://localhost:${PORT}`
+).replace(/\/+$/, "");
 
 // 中间件
 app.use(cors());
 app.use(express.json());
+app.use("/out", express.static(join(process.cwd(), "out")));
 
 // 创建助手实例
 const assistant = new DaxiaAssistant();
@@ -73,6 +78,22 @@ app.get("/api/conversations/:id/messages", (req: Request, res: Response) => {
 
 // ==================== 命令执行 API ====================
 
+function resolveCommandKey(rawCommand: string): string {
+  const normalized = rawCommand.trim().toLowerCase();
+  const firstToken = normalized.split(/\s+/)[0];
+  const is2048Intent =
+    normalized.includes("2048") &&
+    /(生成|打开|玩|做|来个|小游戏|play|create|make|build|start|game)/i.test(
+      rawCommand,
+    );
+
+  if (firstToken === "2048" || is2048Intent) {
+    return "2048";
+  }
+
+  return firstToken;
+}
+
 // 命令处理接口
 app.post("/api/command", async (req: Request, res: Response) => {
   const { command, args = [], conversationId } = req.body;
@@ -97,6 +118,7 @@ app.post("/api/command", async (req: Request, res: Response) => {
       .map((msg) => ({ role: msg.role, content: msg.content }));
 
     let data: any = "";
+    let openUrl: string | undefined;
 
     // 捕获console.log输出
     const logs: string[] = [];
@@ -106,7 +128,7 @@ app.post("/api/command", async (req: Request, res: Response) => {
     };
 
     // 执行命令
-    switch (command.toLowerCase().split(" ")[0]) {
+    switch (resolveCommandKey(command)) {
       case "weather":
         await assistant.summarizeWeather();
         break;
@@ -121,6 +143,7 @@ app.post("/api/command", async (req: Request, res: Response) => {
         break;
       case "2048":
         await assistant.copy2048();
+        openUrl = `${PUBLIC_SERVER_ORIGIN}/out/2048/index.html?t=${Date.now()}`;
         break;
       case "wx":
         // 生成二维码图片（Web端用）
@@ -170,6 +193,7 @@ app.post("/api/command", async (req: Request, res: Response) => {
       success: true,
       message: "命令执行成功",
       data,
+      ...(openUrl ? { openUrl } : {}),
     });
   } catch (error: any) {
     console.log = originalLog;

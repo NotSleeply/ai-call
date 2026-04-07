@@ -12,10 +12,8 @@
 
       <!-- 新建对话按钮 -->
       <div class="p-3">
-        <button
-          @click="createNewChat"
-          class="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-        >
+        <button @click="createNewChat"
+          class="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
           <span>➕</span>
           <span>新建对话</span>
         </button>
@@ -23,24 +21,17 @@
 
       <!-- 对话列表 -->
       <div class="flex-1 overflow-y-auto p-3 space-y-2">
-        <div
-          v-for="chat in chatList"
-          :key="chat.id"
-          @click="selectChat(chat.id)"
-          :class="[
-            'p-3 rounded-lg cursor-pointer transition-colors group',
-            chat.id === currentChatId ? 'bg-gray-700' : 'hover:bg-gray-800'
-          ]"
-        >
+        <div v-for="chat in chatList" :key="chat.id" @click="selectChat(chat.id)" :class="[
+          'p-3 rounded-lg cursor-pointer transition-colors group',
+          chat.id === currentChatId ? 'bg-gray-700' : 'hover:bg-gray-800'
+        ]">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2 flex-1 min-w-0">
               <span>💬</span>
               <span class="text-sm truncate">{{ chat.title }}</span>
             </div>
-            <button
-              @click.stop="deleteChat(chat.id)"
-              class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-opacity"
-            >
+            <button @click.stop="deleteChat(chat.id)"
+              class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-opacity">
               🗑️
             </button>
           </div>
@@ -72,31 +63,26 @@
           <p class="text-lg">你好！我是大虾助手</p>
           <p class="text-sm mt-2">输入命令或直接对话，我可以帮你完成各种任务</p>
           <div class="mt-6 grid grid-cols-2 gap-3">
-            <button
-              v-for="cmd in quickCommands"
-              :key="cmd.name"
-              @click="sendQuickCommand(cmd.name)"
-              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 text-sm transition-colors"
-            >
+            <button v-for="cmd in quickCommands" :key="cmd.name" @click="sendQuickCommand(cmd.name)"
+              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 text-sm transition-colors">
               {{ cmd.icon }} {{ cmd.label }}
             </button>
           </div>
         </div>
 
         <!-- 消息列表 -->
-        <div v-for="msg in messages" :key="msg.id" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
-          <div :class="['max-w-2xl rounded-lg p-4', msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800']">
+        <div v-for="msg in messages" :key="msg.id"
+          :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+          <div
+            :class="['max-w-2xl rounded-lg p-4', msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800']">
             <div v-if="msg.role === 'assistant'" class="flex items-center space-x-2 mb-2">
               <span>🦐</span>
               <span class="font-medium">大虾</span>
             </div>
             <!-- 二维码图片 -->
             <img v-if="msg.qr_code" :src="msg.qr_code" alt="微信二维码" class="mb-4 rounded-lg" />
-            <div
-              v-if="msg.role === 'assistant'"
-              class="assistant-markdown text-sm"
-              v-html="renderMarkdown(msg.content)"
-            ></div>
+            <div v-if="msg.role === 'assistant'" class="assistant-markdown text-sm"
+              v-html="renderMarkdown(msg.content)"></div>
             <pre v-else class="whitespace-pre-wrap text-sm font-sans">{{ msg.content }}</pre>
           </div>
         </div>
@@ -121,19 +107,11 @@
       <!-- 输入区域 -->
       <footer class="border-t p-4 bg-white">
         <div class="flex space-x-4">
-          <input
-            v-model="inputText"
-            @keydown.enter="sendMessage"
-            type="text"
-            placeholder="输入命令或消息..."
+          <input v-model="inputText" @keydown.enter="sendMessage" type="text" placeholder="输入命令或消息..."
             class="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :disabled="loading"
-          />
-          <button
-            @click="sendMessage"
-            :disabled="loading || !inputText.trim()"
-            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
+            :disabled="loading" />
+          <button @click="sendMessage" :disabled="loading || !inputText.trim()"
+            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             发送
           </button>
         </div>
@@ -146,7 +124,7 @@
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { daxiaAPI, type Conversation, type Message } from './api/daxia'
+import { daxiaAPI, type Conversation, type Message, type CommandResponse } from './api/daxia'
 
 const isConnected = ref(false)
 const loading = ref(false)
@@ -155,6 +133,7 @@ const loadingPhase = ref('')
 const inputText = ref('')
 const currentChatId = ref(1)
 const messageListRef = ref<HTMLElement | null>(null)
+const pendingLaunchUrl = ref<string | null>(null)
 
 const loadingPhases = [
   '正在与助手同步上下文...',
@@ -224,12 +203,31 @@ function renderMarkdown(content: string): string {
   return DOMPurify.sanitize(html)
 }
 
+function isLaunchConfirm(text: string): boolean {
+  return /^(启动|开始|打开|start|open|go)$/i.test(text.trim())
+}
+
+function isLaunchCancel(text: string): boolean {
+  return /^(取消|不用|不启动|不要|算了|cancel|no)$/i.test(text.trim())
+}
+
+function appendLocalMessage(role: 'user' | 'assistant', content: string) {
+  messages.value.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    conversation_id: currentChatId.value,
+    role,
+    content,
+    created_at: new Date().toISOString(),
+  })
+  scrollToBottom()
+}
+
 // 格式化时间
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
@@ -259,7 +257,7 @@ async function loadChatList() {
 // 加载对话消息
 async function loadMessages() {
   if (!currentChatId.value) return
-  
+
   try {
     const conv = await daxiaAPI.getConversation(currentChatId.value)
     messages.value = conv.messages || []
@@ -292,11 +290,11 @@ function selectChat(id: number) {
 
 async function deleteChat(id: number) {
   if (!confirm('确定要删除这个对话吗？')) return
-  
+
   try {
     await daxiaAPI.deleteConversation(id)
     chatList.value = chatList.value.filter(c => c.id !== id)
-    
+
     if (currentChatId.value === id) {
       if (chatList.value.length > 0) {
         currentChatId.value = chatList.value[0].id
@@ -313,21 +311,73 @@ async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
 
+  // 二段式确认启动：先生成，再由用户输入“启动”后另开新页
+  if (pendingLaunchUrl.value && isLaunchConfirm(text)) {
+    inputText.value = ''
+    appendLocalMessage('user', text)
+
+    const launchUrl = pendingLaunchUrl.value
+    pendingLaunchUrl.value = null
+
+    // 先正常显示“分析/思考”加载框
+    startLoadingState('正在分析启动请求...')
+    const startTime = Date.now()
+    const minAnalyzeDuration = 1800 + Math.random() * 1200 // 1.8-3s
+
+    try {
+      const elapsed = Date.now() - startTime
+      if (elapsed < minAnalyzeDuration) {
+        await wait(minAnalyzeDuration - elapsed)
+      }
+    } finally {
+      stopLoadingState()
+      scrollToBottom()
+    }
+
+    appendLocalMessage('assistant', '🚀 已启动成功，正在为你打开 2048...')
+
+    // 使用 setTimeout：3 秒后再执行打开
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        const newTab = window.open(launchUrl, '_blank')
+        if (newTab) {
+          newTab.focus()
+        }
+        resolve()
+      }, 3000)
+    })
+    return
+  }
+
+  if (pendingLaunchUrl.value && isLaunchCancel(text)) {
+    inputText.value = ''
+    appendLocalMessage('user', text)
+    appendLocalMessage('assistant', '👌 已取消启动 2048。')
+    pendingLaunchUrl.value = null
+    return
+  }
+
   inputText.value = ''
-  
+  let response: CommandResponse | null = null
+
   // 判断是否是命令
   const isCommand = ['weather', 'news', 'email', 'summary', 'wx', 'analyze', 'help', 'read', 'write', 'list', 'search', 'exec', '2048'].includes(text.split(' ')[0])
-  
+
   if (isCommand) {
-    await executeCommand(text)
+    response = await executeCommand(text)
   } else {
     // 普通对话
-    await handleChat(text)
+    response = await handleChat(text)
   }
-  
+
   // 刷新消息列表
   await loadMessages()
   await loadChatList()
+
+  // 严格顺序：生成完成 -> 刷新消息 -> 最后等待用户确认启动
+  if (response?.success && response.openUrl) {
+    pendingLaunchUrl.value = response.openUrl
+  }
 }
 
 async function sendQuickCommand(command: string) {
@@ -335,16 +385,17 @@ async function sendQuickCommand(command: string) {
   await sendMessage()
 }
 
-async function executeCommand(command: string) {
+async function executeCommand(command: string): Promise<CommandResponse | null> {
   const cmd = command.split(' ')[0]
   const config = commandConfig[cmd] || { loading: '执行中...' }
   startLoadingState(config.loading)
 
   const startTime = Date.now()
   const minDuration = 2600 + Math.random() * 3200 // 2.6-5.8秒随机等待
+  let response: CommandResponse | null = null
 
   try {
-    await daxiaAPI.executeCommand(command, currentChatId.value)
+    response = await daxiaAPI.executeCommand(command, currentChatId.value)
     isConnected.value = true
   } catch (error: any) {
     console.error('执行命令失败:', error)
@@ -357,16 +408,19 @@ async function executeCommand(command: string) {
     stopLoadingState()
     scrollToBottom()
   }
+
+  return response
 }
 
-async function handleChat(text: string) {
+async function handleChat(text: string): Promise<CommandResponse | null> {
   startLoadingState('思考中...')
 
   const startTime = Date.now()
   const minDuration = 2200 + Math.random() * 2800 // 2.2-5秒随机等待
+  let response: CommandResponse | null = null
 
   try {
-    await daxiaAPI.executeCommand(text, currentChatId.value)
+    response = await daxiaAPI.executeCommand(text, currentChatId.value)
   } catch (error: any) {
     console.error('对话失败:', error)
   } finally {
@@ -378,6 +432,8 @@ async function handleChat(text: string) {
     stopLoadingState()
     scrollToBottom()
   }
+
+  return response
 }
 
 // 启动时检测连接状态并加载数据
@@ -442,6 +498,7 @@ onMounted(async () => {
 }
 
 @keyframes dot-bounce {
+
   0%,
   80%,
   100% {
