@@ -12,7 +12,7 @@ const NEW_CONVERSATION_SEED_MESSAGES: Array<{
   },
   {
     role: "user",
-    content: "设置定时任务：每日总结AI新闻,形成markdown放到我的桌面上",
+    content: "设置定时任务：「每日总结AI新闻，形成markdown放到我的桌面上」",
   },
   {
     role: "assistant",
@@ -24,6 +24,23 @@ const NEW_CONVERSATION_SEED_MESSAGES: Array<{
   },
 ];
 
+function shouldRefreshSeedMessages(
+  messages: Array<{ role: string; content: string }>,
+): boolean {
+  if (messages.length !== 4) {
+    return false;
+  }
+
+  const first = messages[0]?.content || "";
+  const second = messages[1]?.content || "";
+
+  if (!first.includes("恭喜你绑定成功 大侠")) {
+    return false;
+  }
+
+  return second !== NEW_CONVERSATION_SEED_MESSAGES[1].content;
+}
+
 function ensureInitialDemoConversation(): void {
   const existing = ConversationModel.list(200);
   const seedConversation = existing.find(
@@ -33,6 +50,11 @@ function ensureInitialDemoConversation(): void {
   if (seedConversation) {
     const messages = MessageModel.getByConversation(seedConversation.id);
     if (messages.length === 0) {
+      for (const message of NEW_CONVERSATION_SEED_MESSAGES) {
+        MessageModel.add(seedConversation.id, message.role, message.content);
+      }
+    } else if (shouldRefreshSeedMessages(messages)) {
+      MessageModel.clear(seedConversation.id);
       for (const message of NEW_CONVERSATION_SEED_MESSAGES) {
         MessageModel.add(seedConversation.id, message.role, message.content);
       }
