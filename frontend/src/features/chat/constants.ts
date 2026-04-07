@@ -19,6 +19,11 @@ export const quickCommands = [
   { name: "news", label: "新闻", icon: "📰" },
   { name: "email", label: "邮件", icon: "📧" },
   { name: "ollama 你好，请介绍你自己", label: "Ollama", icon: "🦙" },
+  {
+    name: "请解释 TypeScript 泛型在工程中的实际用途",
+    label: "智能问答",
+    icon: "🤖",
+  },
   { name: "wx", label: "微信", icon: "💬" },
   { name: "summary", label: "总结", icon: "📝" },
   { name: "2048", label: "2048", icon: "🎮" },

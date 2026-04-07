@@ -2,7 +2,8 @@ import { httpClient } from "./http";
 import type { CommandResponse } from "./types";
 
 export interface CommandExecutionOptions {
-  modelPreference?: "auto" | "ollama";
+  modelProvider?: "auto" | "deepseek" | "api" | "ollama";
+  modelName?: string;
   skillId?: string;
 }
 

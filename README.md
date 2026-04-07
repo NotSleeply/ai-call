@@ -95,7 +95,7 @@ pnpm install && pnpm run build
 cd frontend && pnpm install && cd ..   # 仅Web模式需要
 ```
 
-### 配置 DeepSeek / Ollama（用于智能对话）
+### 配置 DeepSeek / API / Ollama（用于智能对话）
 
 编辑项目根目录的 `.env`（可从 `.env.example` 复制）：
 
@@ -103,15 +103,21 @@ cd frontend && pnpm install && cd ..   # 仅Web模式需要
 DEEPSEEK_API_KEY=你的DeepSeekKey
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_BASE_URL=https://api.deepseek.com
+MODEL_API_KEY=你的统一模型APIKey
+MODEL_API_BASE_URL=https://openrouter.ai/api/v1
+MODEL_API_MODEL=gpt-5-mini
+MODEL_API_SITE_URL=
+MODEL_API_APP_NAME=SmallClaw
 OLLAMA_HOST=http://127.0.0.1:11434
-OLLAMA_MODEL=
+OLLAMA_MODEL=qwen3:latest
 ```
 
 说明：
 
-- 普通对话优先调用 DeepSeek，失败时自动回退到本地 Ollama。
-- 如未配置 DeepSeek，也可直接依赖 Ollama（需本机已安装并启动 `ollama serve`，且至少拉取一个模型）。
-- 你也可以通过 `ollama <问题>` 强制走 Ollama，例如：`ollama 解释一下 TypeScript 泛型`。
+- 普通对话默认走 Auto 自动选模：优先 `MODEL_API_*`，失败回退 `DEEPSEEK_*`，最后回退本地 `OLLAMA_*`。
+- 如未配置通用 API，只配置 DeepSeek 也可正常使用。
+- 如不配置任何 API Key，也可通过 Ollama 本地模型继续使用。
+- Web 端 Auto 菜单支持常用模型预设与自定义模型，并通过 `.env` 的 API / DeepSeek / Ollama 配置实际请求。
 - openclaw 人设 prompt 固定写在代码中，不从 `.env` 读取。
 
 ### CLI 模式

@@ -1,4 +1,7 @@
-import { OpenClawClient } from "./assistant_modules/core/openClawClient.js";
+import {
+  ChatGenerationOptions,
+  OpenClawClient,
+} from "./assistant_modules/core/openClawClient.js";
 import { FileSystemService } from "./assistant_modules/services/fileSystemService.js";
 import { GameService } from "./assistant_modules/services/gameService.js";
 import { MultiAgentService } from "./assistant_modules/services/multiAgentService.js";
@@ -25,6 +28,7 @@ const HELP_TEXT = `
 │  summary                 生成对话总结（Markdown格式）       │
 │  agents [任务]           多Agent协同完成任务演示            │
 │  skill <子命令>          配置/添加/运行自定义Skill          │
+│  Auto/模型选择            通过 .env 配置 API 与 DeepSeek      │
 │  ollama <问题>           使用本地Ollama回答问题             │
 │  2048                    生成2048游戏到out目录               │
 │  exit                    退出程序                           │
@@ -54,8 +58,13 @@ export class DaxiaAssistant {
   async generateOpenClawReply(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
   ): Promise<string> {
-    return this.openClawClient.generateReply(userInput, conversationHistory);
+    return this.openClawClient.generateReply(
+      userInput,
+      conversationHistory,
+      options,
+    );
   }
 
   async readFile(filename?: string): Promise<void> {
@@ -110,8 +119,13 @@ export class DaxiaAssistant {
   async smartChat(
     input: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
   ): Promise<void> {
-    const answer = await this.generateOpenClawReply(input, conversationHistory);
+    const answer = await this.generateOpenClawReply(
+      input,
+      conversationHistory,
+      options,
+    );
     console.log(`💬 ${answer}`);
   }
 
@@ -147,11 +161,13 @@ export class DaxiaAssistant {
     skillPrompt: string,
     task: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
   ): Promise<string> {
     return this.openClawClient.generateWithSystemPrompt(
       skillPrompt,
       task,
       conversationHistory,
+      options,
     );
   }
 

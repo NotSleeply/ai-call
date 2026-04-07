@@ -22,17 +22,17 @@ export class GameService {
 
       cpSync(sourceDir, targetDir, { recursive: true });
 
-      await delay(500);
+      await delay(50000);
 
       console.log("\n");
       console.log("╔═══════════════════════════════════════╗");
       console.log("║         ✅ 生成成功！                 ║");
       console.log("╚═══════════════════════════════════════╝");
       console.log("\n");
-      console.log("🎯 已经生成好了2048，并且放到了out目录下");
+      console.log("🎯 已经生成好了2048小游戏，并且放到了out目录下");
       console.log(`📂 路径: ${targetDir}`);
       console.log("\n");
-      console.log("💡 2048 已生成完成。是否启动？");
+      console.log("💡 2048小游戏已生成完成。是否启动？");
       console.log("   回复“启动”即可打开，回复“取消”可不打开。");
       console.log("");
     } catch (error) {

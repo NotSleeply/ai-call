@@ -11,6 +11,18 @@ interface OllamaTagsResponse {
   models?: Array<{ name?: string }>;
 }
 
+interface ChatCompletionsResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+  error?: { message?: string } | string;
+}
+
+export interface ChatGenerationOptions {
+  forceProvider?: "deepseek" | "api" | "ollama";
+  deepseekModel?: string;
+  apiModel?: string;
+  ollamaModel?: string;
+}
+
 const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 AI 智能体（Agent）。
 
 你的任务是根据用户的自然语言指令，自主规划步骤、调用工具、执行操作，并完成真实任务。
@@ -54,10 +66,68 @@ export class OpenClawClient {
     (process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || "").trim() ||
     "http://127.0.0.1:11434";
   private readonly ollamaModel = (process.env.OLLAMA_MODEL || "").trim();
+
+  private readonly modelApiKey = (
+    process.env.MODEL_API_KEY ||
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.XAI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.QWEN_API_KEY ||
+    process.env.KIMI_API_KEY ||
+    process.env.GLM_API_KEY ||
+    process.env.DOUBAO_API_KEY ||
+    process.env.MINIMAX_API_KEY ||
+    ""
+  ).trim();
+  private readonly modelApiModel =
+    (
+      process.env.MODEL_API_MODEL ||
+      process.env.OPENROUTER_MODEL ||
+      process.env.OPENAI_MODEL ||
+      process.env.XAI_MODEL ||
+      process.env.GEMINI_MODEL ||
+      process.env.QWEN_MODEL ||
+      process.env.KIMI_MODEL ||
+      process.env.GLM_MODEL ||
+      process.env.DOUBAO_MODEL ||
+      process.env.MINIMAX_MODEL ||
+      "gpt-5-mini"
+    ).trim() || "gpt-5-mini";
+  private readonly modelApiBaseUrl =
+    (
+      process.env.MODEL_API_BASE_URL ||
+      process.env.OPENROUTER_BASE_URL ||
+      process.env.OPENAI_BASE_URL ||
+      process.env.XAI_BASE_URL ||
+      process.env.GEMINI_BASE_URL ||
+      process.env.QWEN_BASE_URL ||
+      process.env.KIMI_BASE_URL ||
+      process.env.GLM_BASE_URL ||
+      process.env.DOUBAO_BASE_URL ||
+      process.env.MINIMAX_BASE_URL ||
+      "https://openrouter.ai/api/v1"
+    ).trim() || "https://openrouter.ai/api/v1";
+  private readonly modelApiSiteUrl = (
+    process.env.MODEL_API_SITE_URL ||
+    process.env.OPENROUTER_SITE_URL ||
+    ""
+  ).trim();
+  private readonly modelApiAppName =
+    (
+      process.env.MODEL_API_APP_NAME ||
+      process.env.OPENROUTER_APP_NAME ||
+      "SmallClaw"
+    ).trim() || "SmallClaw";
+
   private readonly openClawSystemPrompt = DEFAULT_OPENCLAW_SYSTEM_PROMPT;
 
   private isDeepSeekEnabled(): boolean {
     return this.deepSeekApiKey.length > 0;
+  }
+
+  private isModelApiEnabled(): boolean {
+    return this.modelApiKey.length > 0;
   }
 
   private resolveDeepSeekEndpoints(): string[] {
@@ -80,6 +150,36 @@ export class OpenClawClient {
     return [...new Set(endpoints)];
   }
 
+  private resolveModelApiEndpoints(): string[] {
+    const base = this.modelApiBaseUrl.replace(/\/+$/, "");
+
+    if (
+      base.endsWith("/chat/completions") ||
+      base.endsWith("/v1/chat/completions")
+    ) {
+      return [base];
+    }
+
+    const endpoints = [
+      `${base}/chat/completions`,
+      base.endsWith("/v1")
+        ? `${base}/chat/completions`
+        : `${base}/v1/chat/completions`,
+    ];
+
+    return [...new Set(endpoints)];
+  }
+
+  private resolveOllamaEndpoints(): string[] {
+    const normalized = this.ollamaHost.replace(/\/+$/, "");
+    const defaults = [
+      normalized,
+      "http://127.0.0.1:11434",
+      "http://localhost:11434",
+    ];
+    return [...new Set(defaults)];
+  }
+
   private normalizeConversationHistory(
     conversationHistory: Array<{ role: string; content: string }>,
   ): Array<{ role: "user" | "assistant"; content: string }> {
@@ -93,17 +193,63 @@ export class OpenClawClient {
       .slice(-12);
   }
 
-  private resolveOllamaEndpoints(): string[] {
-    const normalized = this.ollamaHost.replace(/\/+$/, "");
-    const defaults = [
-      normalized,
-      "http://127.0.0.1:11434",
-      "http://localhost:11434",
-    ];
-    return [...new Set(defaults)];
+  private async requestDeepSeek(
+    messages: ChatMessage[],
+    modelOverride?: string,
+  ): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveDeepSeekEndpoints()) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.deepSeekApiKey}`,
+          },
+          body: JSON.stringify({
+            model: (modelOverride || "").trim() || this.deepSeekModel,
+            messages,
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        const data = (await response.json()) as ChatCompletionsResponse;
+        const content = data.choices?.[0]?.message?.content?.trim();
+
+        if (content) {
+          return content;
+        }
+
+        if (typeof data.error === "string") {
+          lastError = data.error;
+        } else {
+          lastError = data.error?.message || "DeepSeek 返回了空内容";
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        lastError = msg;
+      }
+    }
+
+    throw new Error(lastError || "DeepSeek 请求失败");
   }
 
-  private async resolveOllamaModel(endpoint: string): Promise<string> {
+  private async resolveOllamaModel(
+    endpoint: string,
+    modelOverride?: string,
+  ): Promise<string> {
+    const trimmedOverride = (modelOverride || "").trim();
+    if (trimmedOverride) {
+      return trimmedOverride;
+    }
+
     if (this.ollamaModel) {
       return this.ollamaModel;
     }
@@ -122,19 +268,22 @@ export class OpenClawClient {
 
     if (!model) {
       throw new Error(
-        "未检测到本地 Ollama 模型，请先执行例如: ollama pull llama3.2",
+        "未检测到本地 Ollama 模型，请先执行例如: ollama pull qwen3",
       );
     }
 
     return model;
   }
 
-  private async requestOllama(messages: ChatMessage[]): Promise<string> {
+  private async requestOllama(
+    messages: ChatMessage[],
+    modelOverride?: string,
+  ): Promise<string> {
     let lastError = "";
 
     for (const endpoint of this.resolveOllamaEndpoints()) {
       try {
-        const model = await this.resolveOllamaModel(endpoint);
+        const model = await this.resolveOllamaModel(endpoint, modelOverride);
         const response = await fetch(`${endpoint}/api/chat`, {
           method: "POST",
           headers: {
@@ -176,19 +325,32 @@ export class OpenClawClient {
     throw new Error(lastError || "Ollama 请求失败");
   }
 
-  private async requestDeepSeek(messages: ChatMessage[]): Promise<string> {
+  private async requestModelApi(
+    messages: ChatMessage[],
+    modelOverride?: string,
+  ): Promise<string> {
     let lastError = "";
 
-    for (const endpoint of this.resolveDeepSeekEndpoints()) {
+    for (const endpoint of this.resolveModelApiEndpoints()) {
       try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.modelApiKey}`,
+        };
+
+        if (this.modelApiSiteUrl) {
+          headers["HTTP-Referer"] = this.modelApiSiteUrl;
+        }
+
+        if (this.modelApiAppName) {
+          headers["X-Title"] = this.modelApiAppName;
+        }
+
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.deepSeekApiKey}`,
-          },
+          headers,
           body: JSON.stringify({
-            model: this.deepSeekModel,
+            model: (modelOverride || "").trim() || this.modelApiModel,
             messages,
             temperature: 0.7,
           }),
@@ -200,86 +362,165 @@ export class OpenClawClient {
           continue;
         }
 
-        const data = (await response.json()) as {
-          choices?: Array<{ message?: { content?: string } }>;
-          error?: { message?: string };
-        };
-
+        const data = (await response.json()) as ChatCompletionsResponse;
         const content = data.choices?.[0]?.message?.content?.trim();
 
         if (content) {
           return content;
         }
 
-        lastError = data.error?.message || "DeepSeek 返回了空内容";
+        if (typeof data.error === "string") {
+          lastError = data.error;
+        } else {
+          lastError = data.error?.message || "通用 API 返回了空内容";
+        }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        lastError = msg;
+        lastError = error instanceof Error ? error.message : String(error);
       }
     }
 
-    throw new Error(lastError || "DeepSeek 请求失败");
+    throw new Error(lastError || "通用 API 请求失败");
   }
 
-  async generateReply(
+  private buildMessages(
+    systemPrompt: string,
     userInput: string,
-    conversationHistory: Array<{ role: string; content: string }> = [],
-  ): Promise<string> {
-    const rawQuestion = userInput.trim();
-    const forceOllama = /^ollama[\s:]+/i.test(rawQuestion);
-    const question = forceOllama
-      ? rawQuestion.replace(/^ollama[\s:]+/i, "").trim()
-      : rawQuestion;
-
-    if (!question) {
-      return forceOllama
-        ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
-        : "请告诉我你想问什么。";
-    }
-
+    conversationHistory: Array<{ role: string; content: string }>,
+  ): ChatMessage[] {
     const normalizedHistory =
       this.normalizeConversationHistory(conversationHistory);
-    const messages: ChatMessage[] = [
-      { role: "system", content: this.openClawSystemPrompt },
+    return [
+      { role: "system", content: systemPrompt },
       ...normalizedHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,
       })),
-      { role: "user", content: question },
+      { role: "user", content: userInput },
     ];
+  }
 
-    if (forceOllama) {
+  private async generateByOptions(
+    messages: ChatMessage[],
+    options: ChatGenerationOptions,
+  ): Promise<string> {
+    if (options.forceProvider === "deepseek") {
+      if (!this.isDeepSeekEnabled()) {
+        return "当前未配置 DeepSeek API Key，无法按所选模型执行。";
+      }
+
       try {
-        return await this.requestOllama(messages);
+        return await this.requestDeepSeek(messages, options.deepseekModel);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return `DeepSeek 调用失败：${msg}`;
+      }
+    }
+
+    if (options.forceProvider === "api") {
+      if (!this.isModelApiEnabled()) {
+        return "当前未配置通用 API Key，无法按所选模型执行。";
+      }
+
+      try {
+        return await this.requestModelApi(messages, options.apiModel);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return `通用 API 调用失败：${msg}`;
+      }
+    }
+
+    if (options.forceProvider === "ollama") {
+      try {
+        return await this.requestOllama(messages, options.ollamaModel);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         return `Ollama 调用失败：${msg}`;
       }
     }
 
+    const errors: string[] = [];
+
+    if (this.isModelApiEnabled()) {
+      try {
+        return await this.requestModelApi(messages, options.apiModel);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`API: ${msg}`);
+      }
+    }
+
     if (this.isDeepSeekEnabled()) {
       try {
-        return await this.requestDeepSeek(messages);
-      } catch {
-        // DeepSeek 失败时回退 Ollama
+        return await this.requestDeepSeek(messages, options.deepseekModel);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`DeepSeek: ${msg}`);
       }
     }
 
     try {
-      return await this.requestOllama(messages);
+      return await this.requestOllama(messages, options.ollamaModel);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (!this.isDeepSeekEnabled()) {
-        return `未检测到 DeepSeek API Key，且 Ollama 调用失败：${msg}`;
-      }
-      return `DeepSeek 与 Ollama 均调用失败：${msg}`;
+      errors.push(`Ollama: ${msg}`);
     }
+
+    if (!this.isModelApiEnabled() && !this.isDeepSeekEnabled()) {
+      return "未检测到 API Key，且 Ollama 调用失败。请在 .env 中设置 MODEL_API_KEY / DEEPSEEK_API_KEY 或配置 OLLAMA。";
+    }
+
+    return errors.length > 0
+      ? `自动选模失败：${errors.join("；")}`
+      : "自动选模失败：未获取到可用回复。";
+  }
+
+  async generateReply(
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
+  ): Promise<string> {
+    const rawQuestion = userInput.trim();
+    const ollamaWithModelMatch = rawQuestion.match(
+      /^ollama:([^\s]+)\s+([\s\S]+)$/i,
+    );
+    const forceOllamaByPrefix = /^ollama[\s:]+/i.test(rawQuestion);
+    const question = ollamaWithModelMatch
+      ? ollamaWithModelMatch[2].trim()
+      : forceOllamaByPrefix
+        ? rawQuestion.replace(/^ollama[\s:]+/i, "").trim()
+        : rawQuestion;
+
+    if (!question) {
+      return forceOllamaByPrefix || Boolean(ollamaWithModelMatch)
+        ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
+        : "请告诉我你想问什么。";
+    }
+
+    const messages = this.buildMessages(
+      this.openClawSystemPrompt,
+      question,
+      conversationHistory,
+    );
+
+    const mergedOptions = forceOllamaByPrefix
+      ? {
+          ...options,
+          forceProvider: "ollama" as const,
+          ollamaModel:
+            ollamaWithModelMatch?.[1]?.trim() ||
+            (options.ollamaModel || "").trim() ||
+            undefined,
+        }
+      : options;
+
+    return this.generateByOptions(messages, mergedOptions);
   }
 
   async generateWithSystemPrompt(
     systemPrompt: string,
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -287,36 +528,12 @@ export class OpenClawClient {
       return "请输入要让 skill 处理的任务内容。";
     }
 
-    const normalizedHistory =
-      this.normalizeConversationHistory(conversationHistory);
-    const messages: ChatMessage[] = [
-      {
-        role: "system",
-        content: systemPrompt.trim() || this.openClawSystemPrompt,
-      },
-      ...normalizedHistory.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      { role: "user", content: question },
-    ];
+    const messages = this.buildMessages(
+      systemPrompt.trim() || this.openClawSystemPrompt,
+      question,
+      conversationHistory,
+    );
 
-    if (this.isDeepSeekEnabled()) {
-      try {
-        return await this.requestDeepSeek(messages);
-      } catch {
-        // DeepSeek 失败时回退 Ollama
-      }
-    }
-
-    try {
-      return await this.requestOllama(messages);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (!this.isDeepSeekEnabled()) {
-        return `未检测到 DeepSeek API Key，且 Ollama 调用失败：${msg}`;
-      }
-      return `DeepSeek 与 Ollama 均调用失败：${msg}`;
-    }
+    return this.generateByOptions(messages, options);
   }
 }

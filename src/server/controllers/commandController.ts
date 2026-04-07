@@ -8,7 +8,8 @@ import { SkillStore } from "../skills/skillStore.js";
 interface CommandRequestBody {
   command?: string;
   conversationId?: number;
-  modelPreference?: "auto" | "ollama";
+  modelProvider?: "auto" | "deepseek" | "api" | "ollama";
+  modelName?: string;
   skillId?: string;
 }
 
@@ -42,7 +43,7 @@ export function createCommandHandler(
     req: Request,
     res: Response,
   ): Promise<void> {
-    const { command, conversationId, modelPreference, skillId } =
+    const { command, conversationId, modelProvider, modelName, skillId } =
       req.body as CommandRequestBody;
 
     if (!command) {
@@ -59,10 +60,25 @@ export function createCommandHandler(
     try {
       MessageModel.add(convId, "user", command);
 
-      const effectiveCommand =
-        modelPreference === "ollama" && !/^ollama\s+/i.test(command)
-          ? `ollama ${command}`
-          : command;
+      const chatModelOptions =
+        modelProvider === "deepseek"
+          ? {
+              forceProvider: "deepseek" as const,
+              deepseekModel: modelName,
+            }
+          : modelProvider === "api"
+            ? {
+                forceProvider: "api" as const,
+                apiModel: modelName,
+              }
+            : modelProvider === "ollama"
+              ? {
+                  forceProvider: "ollama" as const,
+                  ollamaModel: modelName,
+                }
+              : undefined;
+
+      const effectiveCommand = command;
 
       const historyForModel = MessageModel.getByConversation(convId)
         .slice(0, -1)
@@ -83,6 +99,7 @@ export function createCommandHandler(
                   selectedSkill.prompt,
                   command,
                   historyForModel,
+                  chatModelOptions,
                 );
 
           console.log(`🧩 已使用选中 Skill：${selectedSkill.name}`);
@@ -149,7 +166,11 @@ export function createCommandHandler(
               break;
             }
 
-            await assistant.smartChat(effectiveCommand, historyForModel);
+            await assistant.smartChat(
+              effectiveCommand,
+              historyForModel,
+              chatModelOptions,
+            );
           }
         }
       }

@@ -112,7 +112,7 @@
 
       <!-- 输入区域 -->
       <footer class="border-t p-4 bg-white">
-        <div class="rounded-2xl border border-slate-200 px-3 py-3 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-3 shadow-sm">
           <div class="flex gap-3 items-end">
             <div class="flex-1 min-w-0">
               <div v-if="chatSelectedSkill"
@@ -130,67 +130,147 @@
             </button>
           </div>
 
-          <div ref="toolbarMenuRef" class="mt-3 flex items-center gap-2 text-sm relative">
-            <div class="relative">
-              <button @click="toggleModelMenu"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
-                <span>🧠</span>
-                <span>{{ selectedModelLabel }}</span>
-                <span>▾</span>
-              </button>
+          <div ref="toolbarMenuRef" class="mt-3 flex items-center justify-between text-sm relative">
+            <div class="flex items-center gap-1.5">
+              <div class="relative">
+                <button @click="toggleCraftMenu"
+                  class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
+                  <span>📁</span>
+                  <span>Craft · {{ selectedCraftLabel }}</span>
+                  <span>▾</span>
+                </button>
 
-              <div v-if="modelMenuOpen"
-                class="absolute left-0 bottom-[calc(100%+8px)] w-44 rounded-xl border border-slate-200 bg-white shadow-xl p-1 z-30">
-                <button @click="chooseModel('auto')"
-                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
-                  Auto（默认）
+                <div v-if="craftMenuOpen"
+                  class="absolute left-0 bottom-[calc(100%+8px)] w-40 rounded-xl border border-slate-200 bg-white shadow-xl p-1 z-30">
+                  <button @click="chooseCraftMode('plan')"
+                    class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                    Plan
+                  </button>
+                  <button @click="chooseCraftMode('ask')"
+                    class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                    Ask
+                  </button>
+                  <button @click="chooseCraftMode('agent')"
+                    class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                    Agent
+                  </button>
+                </div>
+              </div>
+
+              <div class="relative">
+                <button @click="toggleModelMenu"
+                  class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
+                  <span>⚙️</span>
+                  <span>{{ selectedModelDisplay }}</span>
+                  <span>▾</span>
                 </button>
-                <button @click="chooseModel('ollama')"
-                  class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
-                  Ollama（强制）
-                </button>
+
+                <div v-if="modelMenuOpen"
+                  class="absolute left-0 bottom-[calc(100%+10px)] w-[360px] max-h-[420px] rounded-2xl border border-slate-200 bg-white shadow-[0_14px_36px_rgba(15,23,42,0.18)] z-30 flex flex-col overflow-hidden">
+                  <div class="px-3 py-2 border-b border-slate-100 text-xs text-slate-500">
+                    当前模型: <span class="text-slate-700">{{ selectedModelDisplay }}</span>
+                  </div>
+
+                  <div class="p-2 overflow-y-auto space-y-2 flex-1">
+                    <button @click="chooseAutoModel"
+                      class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                      Auto（自动选择模型）
+                    </button>
+
+                    <div class="px-2.5 py-1 text-xs text-slate-500">常用模型</div>
+                    <button v-for="model in commonModels" :key="`preset-${model.provider}-${model.modelName}`"
+                      @click="chooseModelOption(model)"
+                      class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                      {{ model.label }}
+                    </button>
+
+                    <div v-if="customModels.length > 0">
+                      <div class="px-2.5 py-1 text-xs text-slate-500">自定义模型</div>
+                      <button v-for="model in customModels" :key="`custom-${model.provider}-${model.modelName}`"
+                        @click="chooseModelOption(model)"
+                        class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
+                        {{ model.label }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="border-t border-slate-100 p-2.5 space-y-2">
+                    <div class="text-xs text-slate-500">添加其他模型</div>
+                    <div class="flex gap-2">
+                      <select v-model="customModelProvider"
+                        class="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="api">API</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="ollama">Ollama</option>
+                      </select>
+                      <input v-model="customModelName" type="text" placeholder="模型名，如 gpt-5-mini"
+                        class="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <button @click="addCustomModel"
+                      class="w-full rounded-lg bg-slate-900 text-white py-1.5 text-sm hover:bg-black disabled:opacity-50"
+                      :disabled="!customModelName.trim()">
+                      添加并使用
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="relative">
               <button @click="toggleSkillMenu"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
+                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 hover:bg-slate-100">
                 <span>🧩</span>
                 <span>Skills</span>
                 <span>▾</span>
               </button>
 
               <div v-if="skillMenuOpen"
-                class="absolute left-0 bottom-[calc(100%+8px)] w-[320px] max-h-[340px] rounded-xl border border-slate-200 bg-white shadow-xl z-30 flex flex-col overflow-hidden">
+                class="absolute right-0 bottom-[calc(100%+10px)] w-[320px] max-h-[360px] rounded-2xl border border-slate-200 bg-white shadow-[0_14px_36px_rgba(15,23,42,0.18)] z-30 flex flex-col overflow-hidden">
                 <div class="px-3 py-2 border-b border-slate-100">
-                  <input v-model="skillSearchKeyword" type="text" placeholder="搜索技能"
-                    class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <div class="relative">
+                    <span class="absolute left-2 top-1.5 text-slate-400">🔍</span>
+                    <input v-model="skillSearchKeyword" type="text" placeholder="搜索技能"
+                      class="w-full rounded-lg border border-slate-300 pl-8 pr-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
                 </div>
 
-                <div class="overflow-y-auto p-1.5 space-y-1">
+                <div class="overflow-y-auto p-1.5 space-y-1 flex-1">
                   <button @click="chooseChatSkill('')"
-                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700">
-                    不使用 Skill
+                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 text-slate-700 inline-flex items-center gap-2">
+                    <span
+                      class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 inline-flex items-center justify-center text-xs">-</span>
+                    <span>不使用 Skill</span>
                   </button>
 
                   <button v-for="skill in filteredChatSkills" :key="`picker-${skill.id}`"
                     @click="chooseChatSkill(skill.id)"
-                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100">
-                    <div class="text-sm font-medium text-slate-800 truncate">{{ skill.name }}</div>
-                    <div class="text-xs text-slate-500 truncate mt-0.5">{{ skill.description }}</div>
+                    class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-100 flex items-start gap-2">
+                    <span :class="[
+                      'w-5 h-5 rounded-full inline-flex items-center justify-center text-[11px] mt-0.5',
+                      skill.mode === 'module' ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600',
+                    ]">
+                      {{ skill.mode === 'module' ? 'M' : 'P' }}
+                    </span>
+                    <span class="min-w-0 block">
+                      <span class="text-sm font-medium text-slate-800 truncate block">{{ skill.name }}</span>
+                      <span class="text-xs text-slate-500 truncate mt-0.5 block">{{ skill.description }}</span>
+                    </span>
                   </button>
 
                   <div v-if="filteredChatSkills.length === 0" class="px-2.5 py-3 text-xs text-slate-500">
                     没找到匹配技能。
                   </div>
                 </div>
+
+                <button class="border-t border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                  📂 导入技能
+                </button>
               </div>
             </div>
           </div>
         </div>
       </footer>
     </main>
-
     <div v-if="skillPanelVisible" class="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4">
       <div class="w-full max-w-6xl h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex">
         <aside class="w-72 border-r bg-slate-50 flex flex-col">
@@ -349,8 +429,61 @@ import {
 const isConnected = ref(false)
 const inputText = ref('')
 const pendingLaunchUrl = ref<string | null>(null)
-const selectedModel = ref<'auto' | 'ollama'>('auto')
+
+type CraftMode = 'plan' | 'ask' | 'agent'
+type ModelProvider = 'auto' | 'deepseek' | 'api' | 'ollama'
+
+interface SelectableModel {
+  label: string
+  provider: Exclude<ModelProvider, 'auto'>
+  modelName: string
+}
+
+const CUSTOM_MODELS_STORAGE_KEY = 'smallclaw.custom-model-options'
+
+const selectedCraftMode = ref<CraftMode>('ask')
+const selectedModelProvider = ref<ModelProvider>('auto')
+const selectedModelName = ref('')
+const commonModels: SelectableModel[] = [
+  { label: 'DeepSeek Chat', provider: 'deepseek', modelName: 'deepseek-chat' },
+  { label: 'DeepSeek Reasoner', provider: 'deepseek', modelName: 'deepseek-reasoner' },
+  { label: 'Qwen3 (Ollama)', provider: 'ollama', modelName: 'qwen3:latest' },
+  { label: 'Qwen2.5 7B (Ollama)', provider: 'ollama', modelName: 'qwen2.5:7b' },
+  { label: 'Llama3.1 8B (Ollama)', provider: 'ollama', modelName: 'llama3.1:8b' },
+  { label: 'Mistral 7B (Ollama)', provider: 'ollama', modelName: 'mistral:7b' },
+  { label: 'Gemma2 9B (Ollama)', provider: 'ollama', modelName: 'gemma2:9b' },
+  { label: 'Gemini 3.1 Pro (Preview)', provider: 'api', modelName: 'gemini-3.1-pro' },
+  { label: 'GPT-5 mini', provider: 'api', modelName: 'gpt-5-mini' },
+  { label: 'GPT-5.3-Codex', provider: 'api', modelName: 'gpt-5.3-codex' },
+  { label: 'Raptor mini (Preview)', provider: 'api', modelName: 'raptor-mini' },
+  { label: 'Claude Opus 4.6', provider: 'api', modelName: 'claude-opus-4.6' },
+  { label: 'Claude Sonnet 4.6', provider: 'api', modelName: 'claude-sonnet-4.6' },
+  { label: 'GPT-5.4', provider: 'api', modelName: 'gpt-5.4' },
+  { label: 'Claude Haiku 4.5', provider: 'api', modelName: 'claude-haiku-4.5' },
+  { label: 'Gemini 2.5 Pro', provider: 'api', modelName: 'gemini-2.5-pro' },
+  { label: 'Gemini 3 Flash (Preview)', provider: 'api', modelName: 'gemini-3-flash' },
+  { label: 'GPT-4.1', provider: 'api', modelName: 'gpt-4.1' },
+  { label: 'GPT-4o', provider: 'api', modelName: 'gpt-4o' },
+  { label: 'GPT-5.1', provider: 'api', modelName: 'gpt-5.1' },
+  { label: 'GPT-5.2', provider: 'api', modelName: 'gpt-5.2' },
+  { label: 'GPT-5.2-Codex', provider: 'api', modelName: 'gpt-5.2-codex' },
+  { label: 'GPT-5.4 mini', provider: 'api', modelName: 'gpt-5.4-mini' },
+  { label: 'Grok Code Fast 1', provider: 'api', modelName: 'grok-code-fast-1' },
+  { label: 'Doubao-Seed-2.0-Code', provider: 'api', modelName: 'doubao-seed-2.0-code' },
+  { label: 'Doubao-Seed-Code', provider: 'api', modelName: 'doubao-seed-code' },
+  { label: 'MiniMax-M2.7', provider: 'api', modelName: 'minimax-m2.7' },
+  { label: 'MiniMax-M2.5', provider: 'api', modelName: 'minimax-m2.5' },
+  { label: 'GLM-5V-Turbo', provider: 'api', modelName: 'glm-5v-turbo' },
+  { label: 'GLM-5', provider: 'api', modelName: 'glm-5' },
+  { label: 'Kimi-K2.5', provider: 'api', modelName: 'kimi-k2.5' },
+  { label: 'Qwen3.5-Plus', provider: 'api', modelName: 'qwen3.5-plus' },
+]
+const customModelProvider = ref<Exclude<ModelProvider, 'auto'>>('api')
+const customModelName = ref('')
+const customModels = ref<SelectableModel[]>([])
+
 const chatSelectedSkillId = ref('')
+const craftMenuOpen = ref(false)
 const modelMenuOpen = ref(false)
 const skillMenuOpen = ref(false)
 const skillSearchKeyword = ref('')
@@ -383,9 +516,26 @@ const chatSelectedSkill = computed<Skill | null>(() =>
   skills.value.find((skill) => skill.id === chatSelectedSkillId.value) || null,
 )
 
-const selectedModelLabel = computed(() =>
-  selectedModel.value === 'ollama' ? 'Ollama' : 'Auto',
-)
+const selectedCraftLabel = computed(() => {
+  if (selectedCraftMode.value === 'plan') return 'Plan'
+  if (selectedCraftMode.value === 'agent') return 'Agent'
+  return 'Ask'
+})
+
+const selectedModelDisplay = computed(() => {
+  if (selectedModelProvider.value === 'auto') {
+    return 'Auto'
+  }
+
+  const allOptions = [...commonModels, ...customModels.value]
+  const matched = allOptions.find(
+    (item) =>
+      item.provider === selectedModelProvider.value &&
+      item.modelName === selectedModelName.value,
+  )
+
+  return matched?.label || `${selectedModelProvider.value}:${selectedModelName.value}`
+})
 
 const filteredChatSkills = computed(() => {
   const keyword = skillSearchKeyword.value.trim().toLowerCase()
@@ -401,6 +551,12 @@ const filteredChatSkills = computed(() => {
 const inputPlaceholder = computed(() => {
   if (chatSelectedSkill.value) {
     return `已选择 ${chatSelectedSkill.value.name}，输入要执行的任务...`
+  }
+  if (selectedCraftMode.value === 'plan') {
+    return 'Plan 模式：输入需求，我会先规划再回答...'
+  }
+  if (selectedCraftMode.value === 'agent') {
+    return 'Agent 模式：输入任务，将以多 Agent 协同执行...'
   }
   return '输入命令或消息...'
 })
@@ -486,20 +642,35 @@ async function sendMessage(): Promise<void> {
     return
   }
 
-  inputText.value = ''
+  let outgoingText = text
   const firstToken = text.split(' ')[0]
-  const isCommand = commandKeywords.has(firstToken)
+  const isRawCommand = commandKeywords.has(firstToken)
+
+  if (!isRawCommand) {
+    if (selectedCraftMode.value === 'plan') {
+      outgoingText = `请先给出可执行计划（Plan），再回答以下任务：${text}`
+    } else if (selectedCraftMode.value === 'agent') {
+      outgoingText = `agents ${text}`
+    }
+  }
+
+  inputText.value = ''
+  const isCommand = commandKeywords.has(outgoingText.split(' ')[0])
   const commandOptions = {
-    modelPreference: selectedModel.value,
+    modelProvider: selectedModelProvider.value,
+    modelName:
+      selectedModelProvider.value === 'auto'
+        ? undefined
+        : selectedModelName.value || undefined,
     skillId: chatSelectedSkill.value?.id,
   }
 
   let response: CommandResponse | null = null
 
   if (isCommand) {
-    response = await executeCommand(text, commandOptions)
+    response = await executeCommand(outgoingText, commandOptions)
   } else {
-    response = await handleChat(text, commandOptions)
+    response = await handleChat(outgoingText, commandOptions)
   }
 
   if (response?.success) {
@@ -523,9 +694,23 @@ function clearChatSelectedSkill(): void {
   chatSelectedSkillId.value = ''
 }
 
+function toggleCraftMenu(): void {
+  craftMenuOpen.value = !craftMenuOpen.value
+  if (craftMenuOpen.value) {
+    modelMenuOpen.value = false
+    skillMenuOpen.value = false
+  }
+}
+
+function chooseCraftMode(mode: CraftMode): void {
+  selectedCraftMode.value = mode
+  craftMenuOpen.value = false
+}
+
 function toggleModelMenu(): void {
   modelMenuOpen.value = !modelMenuOpen.value
   if (modelMenuOpen.value) {
+    craftMenuOpen.value = false
     skillMenuOpen.value = false
   }
 }
@@ -533,13 +718,80 @@ function toggleModelMenu(): void {
 function toggleSkillMenu(): void {
   skillMenuOpen.value = !skillMenuOpen.value
   if (skillMenuOpen.value) {
+    craftMenuOpen.value = false
     modelMenuOpen.value = false
     skillSearchKeyword.value = ''
   }
 }
 
-function chooseModel(model: 'auto' | 'ollama'): void {
-  selectedModel.value = model
+function chooseAutoModel(): void {
+  selectedModelProvider.value = 'auto'
+  selectedModelName.value = ''
+  modelMenuOpen.value = false
+}
+
+function chooseModelOption(model: SelectableModel): void {
+  selectedModelProvider.value = model.provider
+  selectedModelName.value = model.modelName
+  modelMenuOpen.value = false
+}
+
+function saveCustomModels(): void {
+  localStorage.setItem(CUSTOM_MODELS_STORAGE_KEY, JSON.stringify(customModels.value))
+}
+
+function loadCustomModels(): void {
+  try {
+    const raw = localStorage.getItem(CUSTOM_MODELS_STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return
+
+    const mapped = parsed
+      .map((item): SelectableModel => ({
+        label: String(item.label || item.modelName || '').trim(),
+        provider:
+          item.provider === 'deepseek'
+            ? 'deepseek'
+            : item.provider === 'ollama'
+              ? 'ollama'
+              : 'api',
+        modelName: String(item.modelName || '').trim(),
+      }))
+      .filter((item) => item.label && item.modelName)
+
+    customModels.value = mapped
+  } catch {
+    customModels.value = []
+  }
+}
+
+function addCustomModel(): void {
+  const name = customModelName.value.trim()
+  if (!name) return
+
+  const provider = customModelProvider.value
+  const alreadyExists = [...commonModels, ...customModels.value].some(
+    (item) => item.provider === provider && item.modelName === name,
+  )
+
+  if (!alreadyExists) {
+    customModels.value.unshift({
+      label:
+        provider === 'deepseek'
+          ? `DeepSeek · ${name}`
+          : provider === 'ollama'
+            ? `Ollama · ${name}`
+            : `API · ${name}`,
+      provider,
+      modelName: name,
+    })
+    saveCustomModels()
+  }
+
+  selectedModelProvider.value = provider
+  selectedModelName.value = name
+  customModelName.value = ''
   modelMenuOpen.value = false
 }
 
@@ -552,6 +804,7 @@ function chooseChatSkill(skillId: string): void {
 function handleClickOutsideMenus(event: MouseEvent): void {
   const target = event.target as Node
   if (!toolbarMenuRef.value?.contains(target)) {
+    craftMenuOpen.value = false
     modelMenuOpen.value = false
     skillMenuOpen.value = false
   }
@@ -587,6 +840,7 @@ async function handleRunSkill(): Promise<void> {
 
 onMounted(async () => {
   window.addEventListener('click', handleClickOutsideMenus)
+  loadCustomModels()
   isConnected.value = await daxiaAPI.healthCheck()
   await refreshSkills()
   await loadChatList()
