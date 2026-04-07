@@ -12,7 +12,7 @@ const NEW_CONVERSATION_SEED_MESSAGES: Array<{
   },
   {
     role: "user",
-    content: "设置定时任务：每日总结AI新闻放到我的桌面上",
+    content: "设置定时任务：每日总结AI新闻,形成markdown放到我的桌面上",
   },
   {
     role: "assistant",
