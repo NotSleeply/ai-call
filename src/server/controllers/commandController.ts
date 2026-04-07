@@ -176,7 +176,10 @@ export function createCommandHandler(
 
       let openUrl: string | undefined;
 
-      if (shouldRunBookDemoScript(effectiveCommand)) {
+      if (shouldRun2048Script(effectiveCommand)) {
+        await assistant.copy2048();
+        openUrl = `${publicServerOrigin}/out/2048/index.html?t=${Date.now()}`;
+      } else if (shouldRunBookDemoScript(effectiveCommand)) {
         console.info("🎬 人间失格找书并移动到桌面");
         await runBookDemoScript();
       } else if (skillId) {
