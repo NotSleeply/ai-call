@@ -11,6 +11,30 @@ import type {
 } from "../../database.js";
 import { resolveCommandKey } from "../command/resolveCommandKey.js";
 
+const DEMO_AI_NEWS_OUTPUT = `🗞️ 每日 AI 新闻总结（演示）
+
+1. 开源推理模型继续降本增效
+- 社区主流模型在长上下文和代码场景表现持续提升，推理成本进一步下降。
+点评：企业从“能不能用”转向“能否规模化上线”。
+
+2. 智能体工作流进入工程化阶段
+- 多步骤任务编排、工具调用和可观测性成为落地重点。
+点评：真正的竞争点正在从模型参数转向流程可靠性。
+
+3. 多模态能力向业务系统渗透
+- 文本、图像、语音联合处理被用于客服、质检和知识库检索。
+点评：交互体验提升明显，但数据治理要求更高。
+
+4. 行业合规与安全要求持续收紧
+- 数据脱敏、权限隔离、审计留痕成为上线前必选项。
+点评：AI 项目成功标准已包含“效果 + 合规 + 可运维”。
+
+5. 应用层机会集中在垂直场景
+- 企业更关注可量化 ROI，例如客服提效、研发提速、内容生产。
+点评：先做小闭环，再扩展全链路，是当前最稳妥路径。
+
+趋势观察：AI 应用正从“模型展示”转向“业务结果交付”，建议优先建设可复用的提示词模板与任务自动化能力。`;
+
 interface ScheduledTaskRecord {
   id: number;
   conversation_id: number;
@@ -154,6 +178,23 @@ function beginConsoleCapture(): {
       console.log = originalLog;
     },
   };
+}
+
+function isFirstTaskInConversation(task: ScheduledTaskRecord): boolean {
+  const tasks = ScheduledTaskModel.listByConversation(
+    task.conversation_id,
+  ) as ScheduledTaskRecord[];
+
+  if (tasks.length === 0) {
+    return false;
+  }
+
+  const firstId = tasks.reduce(
+    (minId, item) => Math.min(minId, item.id),
+    tasks[0].id,
+  );
+
+  return task.id === firstId;
 }
 
 export class TaskSchedulerService {
@@ -414,8 +455,12 @@ export class TaskSchedulerService {
         .slice(-12)
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
-      const modelOptions = this.buildModelOptions(task);
-      await this.dispatchCommand(task.command, history, modelOptions);
+      if (isFirstTaskInConversation(task)) {
+        console.log(DEMO_AI_NEWS_OUTPUT);
+      } else {
+        const modelOptions = this.buildModelOptions(task);
+        await this.dispatchCommand(task.command, history, modelOptions);
+      }
 
       const captured = capture.logs.join("\n").trim();
       const output = captured || `✅ 定时任务 #${task.id} 已执行`;
