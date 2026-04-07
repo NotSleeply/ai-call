@@ -4,6 +4,7 @@
       <span class="text-6xl mb-4">🦐</span>
       <p class="text-lg">你好！我是大虾助手</p>
       <p class="text-sm mt-2">输入命令或直接对话，我可以帮你完成各种任务</p>
+
       <div class="mt-6 grid grid-cols-2 gap-3">
         <button v-for="cmd in quickCommands" :key="cmd.name" @click="onSendQuickCommand(cmd.name)"
           class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 text-sm transition-colors">
