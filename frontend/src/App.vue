@@ -92,7 +92,12 @@
             </div>
             <!-- 二维码图片 -->
             <img v-if="msg.qr_code" :src="msg.qr_code" alt="微信二维码" class="mb-4 rounded-lg" />
-            <pre class="whitespace-pre-wrap text-sm font-sans">{{ msg.content }}</pre>
+            <div
+              v-if="msg.role === 'assistant'"
+              class="assistant-markdown text-sm"
+              v-html="renderMarkdown(msg.content)"
+            ></div>
+            <pre v-else class="whitespace-pre-wrap text-sm font-sans">{{ msg.content }}</pre>
           </div>
         </div>
 
@@ -139,6 +144,8 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { daxiaAPI, type Conversation, type Message } from './api/daxia'
 
 const isConnected = ref(false)
@@ -204,6 +211,17 @@ const commandConfig: Record<string, { loading: string }> = {
   analyze: { loading: '正在分析项目...' },
   help: { loading: '获取帮助信息...' },
   '2048': { loading: '正在生成2048游戏...' },
+}
+
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+})
+
+function renderMarkdown(content: string): string {
+  const parsed = marked.parse(content)
+  const html = typeof parsed === 'string' ? parsed : ''
+  return DOMPurify.sanitize(html)
 }
 
 // 格式化时间
@@ -441,5 +459,52 @@ onMounted(async () => {
   100% {
     transform: translateX(120%);
   }
+}
+
+.assistant-markdown :deep(p) {
+  margin: 0.45rem 0;
+  line-height: 1.6;
+}
+
+.assistant-markdown :deep(ul),
+.assistant-markdown :deep(ol) {
+  margin: 0.4rem 0 0.4rem 1.2rem;
+}
+
+.assistant-markdown :deep(li) {
+  margin: 0.2rem 0;
+}
+
+.assistant-markdown :deep(code) {
+  background: rgba(30, 41, 59, 0.08);
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+  font-family: 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
+}
+
+.assistant-markdown :deep(pre) {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+
+.assistant-markdown :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.assistant-markdown :deep(blockquote) {
+  margin: 0.6rem 0;
+  border-left: 3px solid #94a3b8;
+  padding-left: 0.75rem;
+  color: #475569;
+}
+
+.assistant-markdown :deep(a) {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 </style>
