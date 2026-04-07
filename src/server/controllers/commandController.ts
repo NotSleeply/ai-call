@@ -108,6 +108,62 @@ export function createCommandHandler(
           console.log(output);
         }
       } else {
+        const firstToken = effectiveCommand
+          .trim()
+          .toLowerCase()
+          .split(/\s+/)[0];
+        const explicitCommandTokens = new Set([
+          "agents",
+          "multiagent",
+          "swarm",
+          "schedule",
+          "cron",
+          "timer",
+          "定时",
+          "定时任务",
+          "weather",
+          "news",
+          "email",
+          "summary",
+          "2048",
+          "wx",
+          "analyze",
+          "help",
+        ]);
+
+        // Prefer user-defined module auto triggers for natural language input.
+        if (!explicitCommandTokens.has(firstToken)) {
+          const autoSkill = skillStore.findAutoRunnable(effectiveCommand);
+          if (autoSkill && autoSkill.mode === "module") {
+            const skillOutput = await moduleSkillRunner.run(
+              autoSkill,
+              effectiveCommand,
+            );
+            console.log(`🧩 已自动调用 Skill：${autoSkill.name}`);
+            console.log(skillOutput);
+
+            const data = capture.logs.join("\n");
+            capture.restore();
+
+            MessageModel.add(convId, "assistant", data);
+
+            const conv = ConversationModel.getById(convId);
+            if (conv && conv.title === "新对话") {
+              ConversationModel.updateTitle(
+                convId,
+                command.slice(0, 20) + (command.length > 20 ? "..." : ""),
+              );
+            }
+
+            res.json({
+              success: true,
+              message: "命令执行成功",
+              data,
+            });
+            return;
+          }
+        }
+
         switch (resolveCommandKey(effectiveCommand)) {
           case "schedule": {
             const scheduleText = effectiveCommand
@@ -280,17 +336,6 @@ export function createCommandHandler(
             assistant.showHelp();
             break;
           default: {
-            const autoSkill = skillStore.findAutoRunnable(effectiveCommand);
-            if (autoSkill && autoSkill.mode === "module") {
-              const skillOutput = await moduleSkillRunner.run(
-                autoSkill,
-                effectiveCommand,
-              );
-              console.log(`🧩 已自动调用 Skill：${autoSkill.name}`);
-              console.log(skillOutput);
-              break;
-            }
-
             await assistant.smartChat(
               effectiveCommand,
               historyForModel,

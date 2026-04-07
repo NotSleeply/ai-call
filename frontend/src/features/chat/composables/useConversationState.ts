@@ -6,6 +6,7 @@ export function useConversationState() {
   const messages = ref<Message[]>([]);
   const currentChatId = ref(1);
   const messageListRef = ref<HTMLElement | null>(null);
+  let loadMessagesToken = 0;
 
   const currentChat = computed(() =>
     chatList.value.find((chat) => chat.id === currentChatId.value),
@@ -34,16 +35,26 @@ export function useConversationState() {
     }
   }
 
-  async function loadMessages(): Promise<void> {
-    if (!currentChatId.value) return;
+  async function loadMessages(conversationId: number = currentChatId.value): Promise<void> {
+    if (!conversationId) return;
+
+    const token = ++loadMessagesToken;
 
     try {
-      const conversation = await daxiaAPI.getConversation(currentChatId.value);
+      const conversation = await daxiaAPI.getConversation(conversationId);
+
+      // Ignore stale loads or responses for conversations that are no longer active.
+      if (token !== loadMessagesToken || conversationId !== currentChatId.value) {
+        return;
+      }
+
       messages.value = conversation.messages || [];
       scrollToBottom();
     } catch (error) {
       console.error("加载消息失败:", error);
-      messages.value = [];
+      if (conversationId === currentChatId.value) {
+        messages.value = [];
+      }
     }
   }
 
