@@ -30,7 +30,7 @@ pnpm run build
 cd frontend && pnpm install && cd ..
 ```
 
-2. 配置（在项目根目录创建 `.env` 或复制 `.env.example`）：
+1. 配置（在项目根目录创建 `.env` 或复制 `.env.example`）：
 
 ```env
 DEEPSEEK_API_KEY=你的DeepSeekKey
@@ -45,7 +45,7 @@ OLLAMA_MODEL=qwen3:latest
 
 说明：系统会按优先级选择模型来源（`MODEL_API_*` → `DEEPSEEK_*` → 本地 `OLLAMA_*`）。未配置任何外部 Key 时可配合本地 Ollama 使用。
 
-3. 运行：
+1. 运行：
 
 ```bash
 # CLI 模式（REPL）
@@ -56,7 +56,7 @@ pnpm run web
 # 或在 frontend 中使用 pnpm run dev
 ```
 
-页面默认地址： http://localhost:3000
+页面默认地址： <http://localhost:3000>
 
 ---
 
@@ -122,4 +122,3 @@ SmallClaw/
 ## License
 
 MIT
-
