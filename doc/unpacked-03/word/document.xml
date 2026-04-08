@@ -1,0 +1,1622 @@
+<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:wpsCustomData="http://www.wps.cn/officeDocument/2013/wpsCustomData" mc:Ignorable="w14 w15 wp14">
+  <w:body>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:line="360" w:lineRule="atLeast"/>
+        <w:ind w:firstLine="426"/>
+        <w:jc w:val="center"/>
+        <w:rPr>
+          <w:rFonts w:ascii="华文中宋" w:hAnsi="华文中宋" w:eastAsia="华文中宋" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="52"/>
+          <w:szCs w:val="52"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="华文中宋" w:hAnsi="华文中宋" w:eastAsia="华文中宋" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="52"/>
+          <w:szCs w:val="52"/>
+        </w:rPr>
+        <w:t>中国大学生计算机设计大赛</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:line="360" w:lineRule="atLeast"/>
+        <w:ind w:firstLine="1040"/>
+        <w:jc w:val="center"/>
+        <w:rPr>
+          <w:rFonts w:ascii="华文中宋" w:hAnsi="华文中宋" w:eastAsia="华文中宋" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:szCs w:val="21"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:line="360" w:lineRule="atLeast"/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="center"/>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:szCs w:val="21"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="仿宋_GB2312" w:hAnsi="楷体" w:eastAsia="仿宋_GB2312" w:cs="仿宋_GB2312"/>
+          <w:color w:val="000000"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:drawing>
+          <wp:inline distT="0" distB="0" distL="0" distR="0">
+            <wp:extent cx="1713230" cy="1565910"/>
+            <wp:effectExtent l="0" t="0" r="1270" b="0"/>
+            <wp:docPr id="3" name="图片 3" descr="C:\Users\blculjm\AppData\Local\Temp\1618755595(1).png"/>
+            <wp:cNvGraphicFramePr>
+              <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+            </wp:cNvGraphicFramePr>
+            <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                  <pic:nvPicPr>
+                    <pic:cNvPr id="3" name="图片 3" descr="C:\Users\blculjm\AppData\Local\Temp\1618755595(1).png"/>
+                    <pic:cNvPicPr>
+                      <a:picLocks noChangeAspect="1" noChangeArrowheads="1"/>
+                    </pic:cNvPicPr>
+                  </pic:nvPicPr>
+                  <pic:blipFill>
+                    <a:blip r:embed="rId5" cstate="print">
+                      <a:extLst>
+                        <a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}">
+                          <a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/>
+                        </a:ext>
+                      </a:extLst>
+                    </a:blip>
+                    <a:srcRect/>
+                    <a:stretch>
+                      <a:fillRect/>
+                    </a:stretch>
+                  </pic:blipFill>
+                  <pic:spPr>
+                    <a:xfrm>
+                      <a:off x="0" y="0"/>
+                      <a:ext cx="1760092" cy="1608806"/>
+                    </a:xfrm>
+                    <a:prstGeom prst="rect">
+                      <a:avLst/>
+                    </a:prstGeom>
+                    <a:noFill/>
+                    <a:ln>
+                      <a:noFill/>
+                    </a:ln>
+                  </pic:spPr>
+                </pic:pic>
+              </a:graphicData>
+            </a:graphic>
+          </wp:inline>
+        </w:drawing>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:line="360" w:lineRule="atLeast"/>
+        <w:ind w:firstLine="1040"/>
+        <w:jc w:val="center"/>
+        <w:rPr>
+          <w:rFonts w:ascii="华文中宋" w:hAnsi="华文中宋" w:eastAsia="华文中宋" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:szCs w:val="21"/>
+        </w:rPr>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:after="624" w:afterLines="200" w:line="360" w:lineRule="atLeast"/>
+        <w:ind w:firstLine="426"/>
+        <w:jc w:val="center"/>
+        <w:rPr>
+          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>软件开发类作品文档简要要求</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:before="156" w:beforeLines="50" w:line="360" w:lineRule="atLeast"/>
+        <w:jc w:val="left"/>
+        <w:rPr>
+          <w:rFonts w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>作品编号：</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t>　　　　　　　　　　　　　　　　　　　</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:before="156" w:beforeLines="50" w:line="360" w:lineRule="atLeast"/>
+        <w:jc w:val="left"/>
+        <w:rPr>
+          <w:rFonts w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>作品名称：</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t>　　　　　　　　　　　　　　　　　　　</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:before="156" w:beforeLines="50" w:line="360" w:lineRule="atLeast"/>
+        <w:jc w:val="left"/>
+        <w:rPr>
+          <w:rFonts w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>作　　者：</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t>　　　　　　　　　　　　　　　　　　　</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:before="156" w:beforeLines="50" w:line="360" w:lineRule="atLeast"/>
+        <w:jc w:val="left"/>
+        <w:rPr>
+          <w:rFonts w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>版本编号：</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t>　　　　　　　　　　　　　　　　　　　</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        <w:spacing w:before="156" w:beforeLines="50" w:after="624" w:afterLines="200" w:line="360" w:lineRule="atLeast"/>
+        <w:jc w:val="left"/>
+        <w:rPr>
+          <w:rFonts w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+      </w:pPr>
+      <w:bookmarkStart w:id="7" w:name="_GoBack"/>
+      <w:bookmarkEnd w:id="7"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:szCs w:val="21"/>
+        </w:rPr>
+        <mc:AlternateContent>
+          <mc:Choice Requires="wps">
+            <w:drawing>
+              <wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251659264" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">
+                <wp:simplePos x="0" y="0"/>
+                <wp:positionH relativeFrom="margin">
+                  <wp:posOffset>27305</wp:posOffset>
+                </wp:positionH>
+                <wp:positionV relativeFrom="paragraph">
+                  <wp:posOffset>835025</wp:posOffset>
+                </wp:positionV>
+                <wp:extent cx="5200650" cy="2604770"/>
+                <wp:effectExtent l="4445" t="4445" r="5080" b="10160"/>
+                <wp:wrapTopAndBottom/>
+                <wp:docPr id="2" name="文本框 2"/>
+                <wp:cNvGraphicFramePr/>
+                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                    <wps:wsp>
+                      <wps:cNvSpPr txBox="1"/>
+                      <wps:spPr>
+                        <a:xfrm>
+                          <a:off x="0" y="0"/>
+                          <a:ext cx="5200650" cy="2604770"/>
+                        </a:xfrm>
+                        <a:prstGeom prst="rect">
+                          <a:avLst/>
+                        </a:prstGeom>
+                        <a:solidFill>
+                          <a:schemeClr val="lt1"/>
+                        </a:solidFill>
+                        <a:ln w="6350">
+                          <a:solidFill>
+                            <a:prstClr val="black"/>
+                          </a:solidFill>
+                        </a:ln>
+                      </wps:spPr>
+                      <wps:txbx>
+                        <w:txbxContent>
+                          <w:p>
+                            <w:pPr>
+                              <w:rPr>
+                                <w:rFonts w:ascii="黑体" w:hAnsi="黑体" w:eastAsia="黑体"/>
+                                <w:sz w:val="28"/>
+                                <w:szCs w:val="28"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="黑体" w:hAnsi="黑体" w:eastAsia="黑体"/>
+                                <w:sz w:val="28"/>
+                                <w:szCs w:val="28"/>
+                              </w:rPr>
+                              <w:t>填写说明：</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>本文档适用于所有涉及软件应用与开发类</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>的各个小类</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>作品，包括：（1）Web应用与开发（2）管理信息系统（3）移动应用开发（非游戏类）（4）算法设计与应用（5）企业赛项；</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>本文档为简要文档，不宜长篇大论，需简明扼要，</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>建议</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>设计</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>二级目录</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>，逻辑性强；</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>一级标题采用二号黑体，</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>居中</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>，二级</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>标题采用三号黑体，</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>靠左</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>，</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>根据需要可以</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>设计三级</w:t>
+                            </w:r>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>标题，正文一律用五号宋体；</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>提交文档时，以PDF格式提交本文档；</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                              <w:t>本文档内容是正式参赛内容组成部分，务必真实填写。如不属实，将导致奖项等级降低甚至终止本作品参加比赛。</w:t>
+                            </w:r>
+                          </w:p>
+                          <w:p>
+                            <w:pPr>
+                              <w:pStyle w:val="16"/>
+                              <w:numPr>
+                                <w:ilvl w:val="0"/>
+                                <w:numId w:val="2"/>
+                              </w:numPr>
+                              <w:ind w:firstLineChars="0"/>
+                              <w:rPr>
+                                <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                              </w:rPr>
+                            </w:pPr>
+                            <w:r>
+                              <w:rPr>
+                                <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                                <w:lang w:val="en-US" w:eastAsia="zh-CN"/>
+                              </w:rPr>
+                              <w:t>项目中涉及应用人工智能大模型的内容，务必在各个部分说明清楚。</w:t>
+                            </w:r>
+                          </w:p>
+                        </w:txbxContent>
+                      </wps:txbx>
+                      <wps:bodyPr rot="0" spcFirstLastPara="0" vertOverflow="overflow" horzOverflow="overflow" vert="horz" wrap="square" lIns="91440" tIns="45720" rIns="91440" bIns="45720" numCol="1" spcCol="0" rtlCol="0" fromWordArt="0" anchor="t" anchorCtr="0" forceAA="0" compatLnSpc="1">
+                        <a:noAutofit/>
+                      </wps:bodyPr>
+                    </wps:wsp>
+                  </a:graphicData>
+                </a:graphic>
+              </wp:anchor>
+            </w:drawing>
+          </mc:Choice>
+          <mc:Fallback>
+            <w:pict>
+              <v:shape id="_x0000_s1026" o:spid="_x0000_s1026" o:spt="202" type="#_x0000_t202" style="position:absolute;left:0pt;margin-left:2.15pt;margin-top:65.75pt;height:205.1pt;width:409.5pt;mso-position-horizontal-relative:margin;mso-wrap-distance-bottom:0pt;mso-wrap-distance-top:0pt;z-index:251659264;mso-width-relative:page;mso-height-relative:page;" fillcolor="#FFFFFF [3201]" filled="t" stroked="t" coordsize="21600,21600" o:gfxdata="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&#10;BQAAAAA=&#10;">
+                <v:fill on="t" focussize="0,0"/>
+                <v:stroke weight="0.5pt" color="#000000" joinstyle="round"/>
+                <v:imagedata o:title=""/>
+                <o:lock v:ext="edit" aspectratio="f"/>
+                <v:textbox>
+                  <w:txbxContent>
+                    <w:p>
+                      <w:pPr>
+                        <w:rPr>
+                          <w:rFonts w:ascii="黑体" w:hAnsi="黑体" w:eastAsia="黑体"/>
+                          <w:sz w:val="28"/>
+                          <w:szCs w:val="28"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="黑体" w:hAnsi="黑体" w:eastAsia="黑体"/>
+                          <w:sz w:val="28"/>
+                          <w:szCs w:val="28"/>
+                        </w:rPr>
+                        <w:t>填写说明：</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>本文档适用于所有涉及软件应用与开发类</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>的各个小类</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>作品，包括：（1）Web应用与开发（2）管理信息系统（3）移动应用开发（非游戏类）（4）算法设计与应用（5）企业赛项；</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>本文档为简要文档，不宜长篇大论，需简明扼要，</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>建议</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>设计</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>二级目录</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>，逻辑性强；</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>一级标题采用二号黑体，</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>居中</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>，二级</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>标题采用三号黑体，</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>靠左</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>，</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>根据需要可以</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>设计三级</w:t>
+                      </w:r>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>标题，正文一律用五号宋体；</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>提交文档时，以PDF格式提交本文档；</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                        <w:t>本文档内容是正式参赛内容组成部分，务必真实填写。如不属实，将导致奖项等级降低甚至终止本作品参加比赛。</w:t>
+                      </w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr>
+                        <w:pStyle w:val="16"/>
+                        <w:numPr>
+                          <w:ilvl w:val="0"/>
+                          <w:numId w:val="2"/>
+                        </w:numPr>
+                        <w:ind w:firstLineChars="0"/>
+                        <w:rPr>
+                          <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                        </w:rPr>
+                      </w:pPr>
+                      <w:r>
+                        <w:rPr>
+                          <w:rFonts w:hint="eastAsia" w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+                          <w:lang w:val="en-US" w:eastAsia="zh-CN"/>
+                        </w:rPr>
+                        <w:t>项目中涉及应用人工智能大模型的内容，务必在各个部分说明清楚。</w:t>
+                      </w:r>
+                    </w:p>
+                  </w:txbxContent>
+                </v:textbox>
+                <w10:wrap type="topAndBottom"/>
+              </v:shape>
+            </w:pict>
+          </mc:Fallback>
+        </mc:AlternateContent>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+        </w:rPr>
+        <w:t>填写日期：</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="宋体" w:hAnsi="宋体" w:eastAsia="宋体" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:kern w:val="0"/>
+          <w:sz w:val="32"/>
+          <w:szCs w:val="32"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t>　　　　　　　　　　　　　　　　　　　</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+    </w:p>
+    <w:sdt>
+      <w:sdtPr>
+        <w:rPr>
+          <w:b/>
+          <w:sz w:val="28"/>
+          <w:szCs w:val="28"/>
+        </w:rPr>
+        <w:id w:val="-982233210"/>
+        <w:docPartObj>
+          <w:docPartGallery w:val="Table of Contents"/>
+          <w:docPartUnique/>
+        </w:docPartObj>
+      </w:sdtPr>
+      <w:sdtEndPr>
+        <w:rPr>
+          <w:b/>
+          <w:sz w:val="28"/>
+          <w:szCs w:val="28"/>
+          <w:lang w:val="zh-CN"/>
+        </w:rPr>
+      </w:sdtEndPr>
+      <w:sdtContent>
+        <w:p>
+          <w:pPr>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:sz w:val="32"/>
+              <w:szCs w:val="32"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:sz w:val="32"/>
+              <w:szCs w:val="32"/>
+            </w:rPr>
+            <w:t>目</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:hint="eastAsia"/>
+              <w:sz w:val="32"/>
+              <w:szCs w:val="32"/>
+            </w:rPr>
+            <w:t xml:space="preserve"> </w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:sz w:val="32"/>
+              <w:szCs w:val="32"/>
+            </w:rPr>
+            <w:t xml:space="preserve"> 录</w:t>
+          </w:r>
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+              <w:b w:val="0"/>
+              <w:bCs/>
+              <w:lang w:val="zh-CN"/>
+            </w:rPr>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040660" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第一章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>需求分析</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040660 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040661" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第二章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>概要设计</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040661 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040662" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第三章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>详细设计</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040662 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040663" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第四章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>测试报告</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040663 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040664" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第五章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>安装及使用</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040664 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040665" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>第六章</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+            <w:tab/>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>项目总结</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040665 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>6</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+              <w:sz w:val="21"/>
+              <w:szCs w:val="22"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:fldChar w:fldCharType="begin"/>
+          <w:instrText xml:space="preserve"> HYPERLINK \l "_Toc100040666" </w:instrText><w:fldChar w:fldCharType="separate"/></w:r>
+          
+          
+          <w:r>
+            <w:rPr>
+              <w:rStyle w:val="13"/>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:t>参考文献</w:t>
+          </w:r>
+          <w:r>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+            <w:tab/>
+          <w:fldChar w:fldCharType="begin"/><w:instrText xml:space="preserve"> PAGEREF _Toc100040666 \h </w:instrText><w:fldChar w:fldCharType="separate"/><w:t>7</w:t><w:fldChar w:fldCharType="end"/><w:fldChar w:fldCharType="end"/></w:r>
+          
+          
+          
+          
+          
+          
+        </w:p>
+        <w:p>
+          <w:pPr>
+            <w:pStyle w:val="8"/>
+            <w:rPr>
+              <w:b w:val="0"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="华文楷体" w:hAnsi="华文楷体" w:eastAsia="华文楷体"/>
+              <w:b w:val="0"/>
+              <w:lang w:val="zh-CN"/>
+            </w:rPr>
+            <w:fldChar w:fldCharType="end"/>
+          </w:r>
+        </w:p>
+      </w:sdtContent>
+    </w:sdt>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:ind w:firstLine="420"/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+      <w:r>
+        <w:br w:type="page"/>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="0" w:name="_Toc100040660"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>需求分析</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="0"/>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：本部分内容建议不超过</w:t>
+      </w:r>
+      <w:r>
+        <w:t>1000</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>字，以</w:t>
+      </w:r>
+      <w:r>
+        <w:t>300</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>字以内为宜，简要说明为什么开发本作品，是否存在竞品，对标什么作品以及面向的用户、主要功能、主要性能等。如果存在竞品，建议有竞品分析表格，从多个维度分析本作品与竞品作品比较】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="1" w:name="_Toc100040661"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>概要设计</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="1"/>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：将需求分析结果分解成功能模块以及模块的</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>层次结构</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>、</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>调用关系、模块间接口</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>以及</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>人机界面等</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>，建议用图体现内容，不宜全文字描述。建议图文总体不超过A</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>4</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>纸两页，以1页为宜。</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="2" w:name="_Toc100040662"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>详细设计</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="2"/>
+    </w:p>
+    <w:p>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：包括但不限于：界面设计、数据库设计(如果有</w:t>
+      </w:r>
+      <w:r>
+        <w:t>)</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>、关键算法。界面设计建议用作品实际界面，建议包括典型使用流程；数据库设计建议用表格、E</w:t>
+      </w:r>
+      <w:r>
+        <w:t>R</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>图或U</w:t>
+      </w:r>
+      <w:r>
+        <w:t>ML</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>方式，说明文字简明扼要，违背范式的设计建议请说明理由；关键算法也可以替换为关键技术、技术创新等。本部分不宜大篇幅铺陈，建议突出重点痛点难点特点。】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="3" w:name="_Toc100040663"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>测试报告</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="3"/>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:rPr>
+          <w:lang w:val="zh-CN"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：包括测试报告和技术指标。为了保证作品质量，建议多进行测试，并将测试用例、测试过程、测试结果、修正过程或结果形成文档，也可以将本标题修改为主要测试，撰写主要测试过程结果及其修正；根据测试结果，形成多维度技术指标，包括：运行速度、安全性、扩展性、部署方便性和可用性等。本部分简要说明即可，减少常识性内容。】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="4" w:name="_Toc100040664"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>安装及使用</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="4"/>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:rPr>
+          <w:lang w:val="zh-CN"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：简要说明安装环境要求、安装过程、主要流程等</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+          <w:color w:val="333333"/>
+          <w:szCs w:val="21"/>
+          <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>
+        </w:rPr>
+        <w:t>。建议包含默认安装和典型使用流程。</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+      </w:pPr>
+      <w:bookmarkStart w:id="5" w:name="_Toc100040665"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>项目总结</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="5"/>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:rPr>
+          <w:lang w:val="zh-CN"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>【填写说明：作品制作开发过程中的一些感悟和后续升级等，如：项目协调、任务分解、克服的困难、水平提升、升级演进、商业推广等诸方面。建议部分篇幅不超过A</w:t>
+      </w:r>
+      <w:r>
+        <w:t>4</w:t>
+      </w:r>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>纸1页。】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="2"/>
+        <w:numPr>
+          <w:ilvl w:val="0"/>
+          <w:numId w:val="0"/>
+        </w:numPr>
+      </w:pPr>
+      <w:bookmarkStart w:id="6" w:name="_Toc100040666"/>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia"/>
+        </w:rPr>
+        <w:t>参考文献</w:t>
+      </w:r>
+      <w:bookmarkEnd w:id="6"/>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:rPr>
+          <w:rFonts w:ascii="楷体" w:hAnsi="楷体" w:eastAsia="楷体"/>
+        </w:rPr>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rFonts w:hint="eastAsia" w:ascii="楷体" w:hAnsi="楷体" w:eastAsia="楷体"/>
+        </w:rPr>
+        <w:t>【请按照标准参考文件格式填写】</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:widowControl/>
+        <w:jc w:val="left"/>
+      </w:pPr>
+    </w:p>
+    <w:sectPr>
+      <w:footerReference r:id="rId3" w:type="default"/>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="851" w:right="1797" w:bottom="851" w:left="1797" w:header="851" w:footer="992" w:gutter="0"/>
+      <w:cols w:space="425" w:num="1"/>
+      <w:docGrid w:type="lines" w:linePitch="312" w:charSpace="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>
