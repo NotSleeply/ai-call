@@ -4,10 +4,7 @@ import {
   OpenClawClient,
 } from "./assistant_modules/core/openClawClient.js";
 import { FileSystemService } from "./assistant_modules/services/fileSystemService.js";
-import { GameService } from "./assistant_modules/services/gameService.js";
 import { MultiAgentService } from "./assistant_modules/services/multiAgentService.js";
-import { SummaryService } from "./assistant_modules/services/summaryService.js";
-import { WeChatService } from "./assistant_modules/services/weChatService.js";
 import { delay } from "./assistant_modules/utils/delay.js";
 
 const HELP_TEXT = `
@@ -22,17 +19,11 @@ const HELP_TEXT = `
 │  analyze                 分析当前项目结构                    │
 │  list [目录]             列出目录内容                       │
 │  ask <问题>              智能问答                           │
-│  wx                      连接微信                           │
-│  weather                 总结天气                           │
-│  news                    总结新闻                           │
-│  email                   总结邮件                           │
-│  summary                 生成对话总结（Markdown格式）       │
-│  agents [任务]           多Agent协同完成任务演示            │
-│  schedule <子命令>       配置定时任务（add/list/on/off）     │
+│  agents [任务]           多Agent协同完成任务                 │
 │  skill <子命令>          配置/添加/运行自定义Skill          │
-│  Auto/模型选择            通过 .env 配置 API 与 DeepSeek      │
 │  ollama <问题>           使用本地Ollama回答问题             │
-│  2048                    生成2048游戏到out目录               │
+│  new                     开始新对话                         │
+│  history                 查看对话历史                       │
 │  exit                    退出程序                           │
 ├─────────────────────────────────────────────────────────────┤
 │  💡 提示: 输入任意其他内容将进入智能问答模式               │
@@ -41,14 +32,10 @@ const HELP_TEXT = `
 
 /**
  * 大虾助手门面类
- * 保持对外 API 不变，内部实现按功能拆分到独立模块。
  */
 export class DaxiaAssistant {
   private readonly openClawClient = new OpenClawClient();
   private readonly fileSystemService = new FileSystemService();
-  private readonly weChatService = new WeChatService();
-  private readonly summaryService = new SummaryService();
-  private readonly gameService = new GameService();
   private readonly multiAgentService = new MultiAgentService(
     this.openClawClient,
   );
@@ -131,30 +118,6 @@ export class DaxiaAssistant {
     console.log(`💬 ${answer}`);
   }
 
-  async connectWeChat(): Promise<void> {
-    await this.weChatService.connectWeChat();
-  }
-
-  async generateQRCodeBase64(): Promise<string> {
-    return this.weChatService.generateQRCodeBase64();
-  }
-
-  async summarizeWeather(): Promise<void> {
-    await this.summaryService.summarizeWeather();
-  }
-
-  async summarizeNews(): Promise<void> {
-    await this.summaryService.summarizeNews();
-  }
-
-  async summarizeEmail(): Promise<void> {
-    await this.summaryService.summarizeEmail();
-  }
-
-  async generateSummary(): Promise<void> {
-    await this.summaryService.generateSummary();
-  }
-
   async runMultiAgentCollaboration(task?: string): Promise<void> {
     await this.multiAgentService.runCollaboration(task);
   }
@@ -171,9 +134,5 @@ export class DaxiaAssistant {
       conversationHistory,
       options,
     );
-  }
-
-  async copy2048(): Promise<void> {
-    await this.gameService.copy2048();
   }
 }

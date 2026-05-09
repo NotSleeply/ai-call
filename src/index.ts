@@ -4,16 +4,17 @@ import { DaxiaAssistant } from "./assistant.js";
 import { Database } from "./database.js";
 
 /**
- * 大虾功能演示Demo
+ * SmallClaw CLI - 大虾 AI 编程助手
  *
- * 模拟大虾（AI助手）的核心功能：
+ * 核心功能：
  * - 文件操作：读取、写入、搜索文件
  * - 代码分析：搜索代码、分析项目结构
  * - 命令执行：运行系统命令
  * - 智能问答：回答用户问题
- * - 对话记录：SQLite 持久化存储（CLI/Web 共享）
+ * - 多Agent协同：多智能体协作完成任务
+ * - 对话记录：SQLite 持久化存储
  */
-class DaxiaDemo {
+class SmallClawCLI {
   private assistant: DaxiaAssistant;
   private rl: ReturnType<typeof createInterface>;
   private db: ReturnType<(typeof Database)["getInstance"]>;
@@ -37,7 +38,7 @@ class DaxiaDemo {
   private printWelcome(): void {
     console.log("");
     console.log("╔══════════════════════════════════════════════════════════╗");
-    console.log("║              🦐 大虾功能演示Demo v1.0                    ║");
+    console.log("║           🦐 SmallClaw - 大虾AI编程助手 v1.0            ║");
     console.log("╠══════════════════════════════════════════════════════════╣");
     console.log("║  输入 help 查看可用命令                                  ║");
     console.log("║  输入 exit 退出程序                                      ║");
@@ -45,37 +46,6 @@ class DaxiaDemo {
     console.log("║  输入 new 开始新对话                                     ║");
     console.log("╚══════════════════════════════════════════════════════════╝");
     console.log("");
-  }
-
-  /**
-   * 旋转加载动画（随机 1-20 秒）
-   */
-  private async showLoadingSpinner(action: string = "思考中"): Promise<void> {
-    const minSeconds = 1;
-    const maxSeconds = 20;
-    const duration =
-      (Math.random() * (maxSeconds - minSeconds) + minSeconds) * 1000;
-
-    const spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-    const startTime = Date.now();
-    let i = 0;
-
-    return new Promise((resolve) => {
-      const interval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-
-        // 清除当前行并显示旋转动画
-        process.stdout.write(`\r${spinner[i]} ${action}...`);
-
-        i = (i + 1) % spinner.length;
-
-        if (elapsed >= duration) {
-          clearInterval(interval);
-          process.stdout.write("\r" + " ".repeat(50) + "\r"); // 清除动画
-          resolve();
-        }
-      }, 100);
-    });
   }
 
   /**
@@ -171,7 +141,7 @@ class DaxiaDemo {
         if (!trimmed) continue;
 
         if (trimmed.toLowerCase() === "exit") {
-          console.log("\n👋 再见！感谢使用大虾Demo！\n");
+          console.log("\n👋 再见！感谢使用 SmallClaw！\n");
           this.rl.close();
           break;
         }
@@ -209,31 +179,6 @@ class DaxiaDemo {
           .slice(0, -1)
           .map((msg) => ({ role: msg.role, content: msg.content }))
       : [];
-
-    // 根据命令类型显示不同的加载提示
-    const loadingMessages: Record<string, string> = {
-      help: "加载帮助信息",
-      read: "读取文件",
-      write: "写入文件",
-      search: "搜索内容",
-      exec: "执行命令",
-      analyze: "分析项目",
-      ask: "思考问题",
-      list: "列出目录",
-      wx: "连接微信",
-      weather: "获取天气",
-      news: "获取新闻",
-      email: "获取邮件",
-      summary: "生成总结",
-      agents: "多Agent协同",
-      schedule: "配置定时任务",
-      "2048": "生成2048游戏",
-    };
-
-    const loadingText = loadingMessages[cmd.toLowerCase()] || "思考中";
-
-    // 显示加载动画
-    await this.showLoadingSpinner(loadingText);
 
     let output = "";
 
@@ -286,51 +231,9 @@ class DaxiaDemo {
         });
         this.saveAssistantMessage(output);
         break;
-      case "wx":
-        output = await this.captureOutput(async () => {
-          await this.assistant.connectWeChat();
-        });
-        this.saveAssistantMessage(output);
-        break;
-      case "weather":
-        output = await this.captureOutput(async () => {
-          await this.assistant.summarizeWeather();
-        });
-        this.saveAssistantMessage(output);
-        break;
-      case "news":
-        output = await this.captureOutput(async () => {
-          await this.assistant.summarizeNews();
-        });
-        this.saveAssistantMessage(output);
-        break;
-      case "email":
-        output = await this.captureOutput(async () => {
-          await this.assistant.summarizeEmail();
-        });
-        this.saveAssistantMessage(output);
-        break;
-      case "summary":
-        output = await this.captureOutput(async () => {
-          await this.assistant.generateSummary();
-        });
-        this.saveAssistantMessage(output);
-        break;
       case "agents":
         output = await this.captureOutput(async () => {
           await this.assistant.runMultiAgentCollaboration(args.join(" "));
-        });
-        this.saveAssistantMessage(output);
-        break;
-      case "schedule":
-        output =
-          "⏰ 定时任务目前通过 Web/API 端配置，请在聊天中输入: schedule help";
-        console.log(output);
-        this.saveAssistantMessage(output);
-        break;
-      case "2048":
-        output = await this.captureOutput(async () => {
-          await this.assistant.copy2048();
         });
         this.saveAssistantMessage(output);
         break;
@@ -394,6 +297,6 @@ class DaxiaDemo {
   }
 }
 
-// 启动Demo
-const demo = new DaxiaDemo();
-demo.start().catch(console.error);
+// 启动 CLI
+const cli = new SmallClawCLI();
+cli.start().catch(console.error);
