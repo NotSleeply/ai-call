@@ -2,10 +2,10 @@
 import {
   ChatGenerationOptions,
   OpenClawClient,
-} from "./assistant_modules/core/openClawClient.js";
-import { FileSystemService } from "./assistant_modules/services/fileSystemService.js";
-import { MultiAgentService } from "./assistant_modules/services/multiAgentService.js";
-import { delay } from "./assistant_modules/utils/delay.js";
+} from "../core/ai/openClawClient.js";
+import { FileSystemService } from "../core/services/file.service.js";
+import { MultiAgentService } from "../core/services/multi-agent.service.js";
+import { delay } from "../utils/delay.js";
 
 const HELP_TEXT = `
 ┌─────────────────────────────────────────────────────────────┐

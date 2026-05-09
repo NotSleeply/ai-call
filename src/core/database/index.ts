@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // 数据库文件路径
-const dataDir = join(__dirname, "..", "data");
+const dataDir = join(__dirname, "..", "..", "data");
 if (!existsSync(dataDir)) {
   mkdirSync(dataDir, { recursive: true });
 }
