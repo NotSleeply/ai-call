@@ -5,7 +5,6 @@ import {
 } from "../core/ai/openClawClient.js";
 import { FileSystemService } from "../core/services/file.service.js";
 import { MultiAgentService } from "../core/services/multi-agent.service.js";
-import { delay } from "../utils/delay.js";
 
 const HELP_TEXT = `
 ┌─────────────────────────────────────────────────────────────┐
@@ -100,7 +99,6 @@ export class DaxiaAssistant {
     process.stdout.write("💬 ");
     for (const char of answer) {
       process.stdout.write(char);
-      await delay(20);
     }
     console.log("\n");
   }
