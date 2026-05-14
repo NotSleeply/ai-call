@@ -3,6 +3,7 @@
 SmallClaw 是一个基于命令行的 AI 编程助手，提供文件操作、代码分析、智能问答、多 Agent 协作等功能。
 
 **特性**：
+
 - 🖥️ 纯 CLI 交互模式（REPL）
 - 📁 文件操作：读取、写入、搜索、列出目录
 - 💻 系统命令执行
@@ -90,7 +91,7 @@ Skill 可以以模块形式被触发并执行复杂任务。
 
 ## 项目结构
 
-```
+```bash
 SmallClaw/
 ├── src/                          # 源代码
 │   ├── index.ts                  # CLI 入口（REPL 交互）
@@ -109,14 +110,6 @@ SmallClaw/
 
 ---
 
-## 开发指南
-
-- 建议分支名使用 `feat/`、`fix/`、`docs/` 等前缀
-- 提交前请运行 `pnpm install` 并确保基本功能可启动
-- 修改代码后请运行 `pnpm run build` 重新编译
-
----
-
 ## 常见问题
 
 **Q: 命令不可用？**
@@ -129,7 +122,3 @@ A: 确认本地 Ollama 服务已启动并且 `.env` 中 `OLLAMA_HOST` 配置正�
 A: 在 `src/assistant_modules/services/` 下创建新的服务类，并在 `assistant.ts` 中集成。
 
 ---
-
-## License
-
-MIT
