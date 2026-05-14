@@ -29,7 +29,7 @@ pnpm install
 
 在项目根目录创建 `.env` 文件（或复制 `.env.example`）：
 
-```env
+```bash
 DEEPSEEK_API_KEY=你的DeepSeekKey
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_BASE_URL=https://api.deepseek.com
