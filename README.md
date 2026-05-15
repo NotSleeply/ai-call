@@ -58,21 +58,21 @@ pnpm start
 
 ## 常用命令
 
-| 命令 | 说明 | 示例 |
-|------|------|------|
-| `help` | 显示帮助信息 | `help` |
-| `read <文件>` | 读取文件内容 | `read package.json` |
-| `write <文件> <内容>` | 写入文件 | `write demo.txt 你好世界` |
-| `list [目录]` | 列出目录内容 | `list src` |
-| `search <关键词>` | 搜索代码关键词 | `search function` |
-| `exec <命令>` | 执行系统命令 | `exec dir` |
-| `analyze` | 分析当前项目结构 | `analyze` |
-| `ask <问题>` | 智能提问 | `ask 什么是 TypeScript？` |
-| `agents [任务]` | 多 Agent 协同 | `agents 设计REST API` |
-| `ollama <问题>` | 使用本地 Ollama | `ollama 解释闭包` |
-| `new` | 开始新对话 | `new` |
-| `history` | 查看对话历史 | `history` |
-| `exit` | 退出程序 | `exit` |
+| 命令                  | 说明             | 示例                      |
+| --------------------- | ---------------- | ------------------------- |
+| `help`                | 显示帮助信息     | `help`                    |
+| `read <文件>`         | 读取文件内容     | `read package.json`       |
+| `write <文件> <内容>` | 写入文件         | `write demo.txt 你好世界` |
+| `list [目录]`         | 列出目录内容     | `list src`                |
+| `search <关键词>`     | 搜索代码关键词   | `search function`         |
+| `exec <命令>`         | 执行系统命令     | `exec dir`                |
+| `analyze`             | 分析当前项目结构 | `analyze`                 |
+| `ask <问题>`          | 智能提问         | `ask 什么是 TypeScript？` |
+| `agents [任务]`       | 多 Agent 协同    | `agents 设计REST API`     |
+| `ollama <问题>`       | 使用本地 Ollama  | `ollama 解释闭包`         |
+| `new`                 | 开始新对话       | `new`                     |
+| `history`             | 查看对话历史     | `history`                 |
+| `exit`                | 退出程序         | `exit`                    |
 
 **提示**：输入任意其他内容将进入智能问答模式。
 
