@@ -71,12 +71,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-tarball
-          path: ai-call-cli-*.tgz
+          path: notsleeply-ai-call-cli-*.tgz
 
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ai-call-cli-*.tgz
+          files: notsleeply-ai-call-cli-*.tgz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

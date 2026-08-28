@@ -39,7 +39,7 @@
 
 ```bash
 # 方式一：npm 全局安装（发布版）
-npm install -g ai-call-cli
+npm install -g @notsleeply/ai-call-cli
 
 # 方式二：源码安装
 pnpm install
