@@ -30,6 +30,11 @@ jobs:
       - name: 构建
         run: pnpm build
 
+      - name: 验证 npm 登录状态
+        run: |
+          echo "registry: $(npm config get registry)"
+          npm whoami
+
       - name: 发布到 npm
         run: npm publish
         env:
