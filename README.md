@@ -153,7 +153,7 @@ aic -i
 
 ---
 
-## 关于项目
+## QA常见问题
 
 **Q: 为什么做这个项目？**
 
@@ -176,8 +176,6 @@ A:
 **Q: 和 `claude -p`、`gh copilot` 这类命令有什么不同？**
 
 A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/stderr 严格分离保证管道纯净；`-x` 的命令确认执行机制；`commit`/`review` 这类开箱即用的 Git 子命令。另外不绑定任何单一模型厂商。
-
-## 常见问题
 
 **Q: 命令不可用？**
 A: 确认已执行 `pnpm install`、`pnpm run build`、`npm link`。
