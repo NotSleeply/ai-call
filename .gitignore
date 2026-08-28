@@ -1,6 +1,8 @@
 node_modules/
 dist/
 build/
+data/
+.husky/
 .env
 .DS_Store
 *.log
@@ -15,5 +17,5 @@ coverage/
 *.swp
 *.swo
 *.zip
-*.tar.gz      
+*.tar.gz
 out/

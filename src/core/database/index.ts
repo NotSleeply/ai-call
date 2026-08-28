@@ -56,7 +56,6 @@ db.exec(`
     conversation_id INTEGER NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
     content TEXT NOT NULL,
-    qr_code TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
   );
@@ -65,6 +64,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
   CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC);
 `);
+
+// 迁移：移除旧版 messages 表的 qr_code 列（已无写入方）
+const messagesColumns = db
+  .prepare("PRAGMA table_info(messages)")
+  .all() as Array<{ name: string }>;
+if (messagesColumns.some((column) => column.name === "qr_code")) {
+  db.exec(`
+    ALTER TABLE messages DROP COLUMN qr_code;
+  `);
+}
 
 // 预编译语句
 const stmts = {
@@ -86,7 +95,7 @@ const stmts = {
 
   // 消息相关
   addMessage: db.prepare(
-    "INSERT INTO messages (conversation_id, role, content, qr_code) VALUES (?, ?, ?, ?)",
+    "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
   ),
   getMessages: db.prepare(
     "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
@@ -142,21 +151,14 @@ export const MessageModel = {
     conversationId: number,
     role: "user" | "assistant",
     content: string,
-    qrCode?: string,
   ): {
     id: number;
     conversation_id: number;
     role: string;
     content: string;
-    qr_code?: string;
     created_at: string;
   } {
-    const result = stmts.addMessage.run(
-      conversationId,
-      role,
-      content,
-      qrCode || null,
-    );
+    const result = stmts.addMessage.run(conversationId, role, content);
     ConversationModel.touch(conversationId);
     return MessageModel.getById(result.lastInsertRowid as number)!;
   },
@@ -167,7 +169,6 @@ export const MessageModel = {
         conversation_id: number;
         role: string;
         content: string;
-        qr_code?: string;
         created_at: string;
       }
     | undefined {
@@ -179,7 +180,6 @@ export const MessageModel = {
     conversation_id: number;
     role: string;
     content: string;
-    qr_code?: string;
     created_at: string;
   }> {
     return stmts.getMessages.all(conversationId) as any[];
@@ -214,7 +214,6 @@ class AppDatabase {
     conversation_id: number;
     role: string;
     content: string;
-    qr_code?: string;
     created_at: string;
     timestamp: string;
   }> {
@@ -228,9 +227,8 @@ class AppDatabase {
     conversationId: number,
     role: "user" | "assistant",
     content: string,
-    qrCode?: string,
   ): void {
-    MessageModel.add(conversationId, role, content, qrCode);
+    MessageModel.add(conversationId, role, content);
   }
 }
 
