@@ -177,35 +177,6 @@ A:
 
 A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/stderr 严格分离保证管道纯净；`-x` 的命令确认执行机制；`commit`/`review` 这类开箱即用的 Git 子命令。另外不绑定任何单一模型厂商。
 
----
-
-## 项目结构
-
-```
-ai-call/
-├── src/
-│   ├── index.ts                    # 入口：参数路由
-│   └── app/
-│       ├── args.ts                 # 参数解析与帮助文本
-│       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
-│       ├── exec.ts                 # -x 命令生成与确认执行
-│       ├── git-commands.ts         # commit / review 子命令
-│       ├── tty.ts                  # 终端确认输入与转圈提示
-│       ├── assistant.ts            # 助手门面
-│       └── cli.ts                  # 旧版 REPL（aic -i）
-├── src/core/
-│   ├── ai/openClawClient.ts        # 模型客户端（多 provider、流式 SSE/NDJSON）
-│   ├── database/index.ts           # SQLite 数据库
-│   └── services/                   # 文件服务、多 Agent 协同
-├── .github/workflows/release.yml   # 打 tag 自动发 npm 包与 GitHub Release
-├── data/                           # 数据文件（SQLite 数据库等）
-├── package.json
-├── tsconfig.json
-└── .env.example
-```
-
----
-
 ## 常见问题
 
 **Q: 命令不可用？**
