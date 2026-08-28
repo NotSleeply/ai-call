@@ -421,7 +421,7 @@ export class OpenClawClient {
         return await this.requestDeepSeek(messages, options.deepseekModel);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        return `DeepSeek 调用失败：${msg}`;
+        throw new Error(`DeepSeek 调用失败：${msg}`);
       }
     }
 
@@ -434,7 +434,7 @@ export class OpenClawClient {
         return await this.requestModelApi(messages, options.apiModel);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        return `通用 API 调用失败：${msg}`;
+        throw new Error(`通用 API 调用失败：${msg}`);
       }
     }
 
@@ -443,7 +443,7 @@ export class OpenClawClient {
         return await this.requestOllama(messages, options.ollamaModel);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        return `Ollama 调用失败：${msg}`;
+        throw new Error(`Ollama 调用失败：${msg}`);
       }
     }
 
@@ -475,12 +475,16 @@ export class OpenClawClient {
     }
 
     if (!this.isModelApiEnabled() && !this.isDeepSeekEnabled()) {
-      return "未检测到可用模型配置。运行 aic config 快速配置，或手动编辑 .env（MODEL_API_KEY / DEEPSEEK_API_KEY / OLLAMA_HOST）。";
+      throw new Error(
+        "未检测到可用模型配置。运行 aic config 快速配置，或手动编辑 .env（MODEL_API_KEY / DEEPSEEK_API_KEY / OLLAMA_HOST）。",
+      );
     }
 
-    return errors.length > 0
-      ? `自动选模失败：${errors.join("；")}`
-      : "自动选模失败：未获取到可用回复。";
+    throw new Error(
+      errors.length > 0
+        ? `自动选模失败：${errors.join("；")}`
+        : "自动选模失败：未获取到可用回复。",
+    );
   }
 
   private async readResponseLines(
@@ -522,6 +526,8 @@ export class OpenClawClient {
     let lastError = "";
 
     for (const endpoint of this.resolveDeepSeekEndpoints()) {
+      let emittedDelta = false;
+
       try {
         const response = await fetch(endpoint, {
           method: "POST",
@@ -560,6 +566,7 @@ export class OpenClawClient {
             if (typeof delta === "string" && delta.length > 0) {
               fullText += delta;
               receivedDelta = true;
+              emittedDelta = true;
               onDelta(delta);
             }
           } catch {
@@ -581,6 +588,11 @@ export class OpenClawClient {
         lastError = "DeepSeek 返回了空内容";
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
+
+        // 已经输出部分内容后不能再尝试其他 endpoint，否则会把两次回答拼在一起。
+        if (emittedDelta) {
+          throw error instanceof Error ? error : new Error(lastError);
+        }
       }
     }
 
@@ -595,6 +607,8 @@ export class OpenClawClient {
     let lastError = "";
 
     for (const endpoint of this.resolveOllamaEndpoints()) {
+      let emittedDelta = false;
+
       try {
         const model = await this.resolveOllamaModel(endpoint, modelOverride);
         const response = await fetch(`${endpoint}/api/chat`, {
@@ -633,6 +647,7 @@ export class OpenClawClient {
             if (typeof delta === "string" && delta.length > 0) {
               fullText += delta;
               receivedDelta = true;
+              emittedDelta = true;
               onDelta(delta);
             }
           } catch {
@@ -654,6 +669,11 @@ export class OpenClawClient {
         lastError = "Ollama 返回了空内容";
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
+
+        // 已经输出部分内容后不能再尝试其他 endpoint，否则会把两次回答拼在一起。
+        if (emittedDelta) {
+          throw error instanceof Error ? error : new Error(lastError);
+        }
       }
     }
 
@@ -668,6 +688,8 @@ export class OpenClawClient {
     let lastError = "";
 
     for (const endpoint of this.resolveModelApiEndpoints()) {
+      let emittedDelta = false;
+
       try {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
@@ -716,6 +738,7 @@ export class OpenClawClient {
             if (typeof delta === "string" && delta.length > 0) {
               fullText += delta;
               receivedDelta = true;
+              emittedDelta = true;
               onDelta(delta);
             }
           } catch {
@@ -737,6 +760,11 @@ export class OpenClawClient {
         lastError = "通用 API 返回了空内容";
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
+
+        // 已经输出部分内容后不能再尝试其他 endpoint，否则会把两次回答拼在一起。
+        if (emittedDelta) {
+          throw error instanceof Error ? error : new Error(lastError);
+        }
       }
     }
 

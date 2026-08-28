@@ -32,22 +32,35 @@ const EXEC_SYSTEM_PROMPT = `你是终端命令生成器。
 5. 如果用户要求不明确，输出空代码块。`;
 
 export function extractCommand(text: string): { command: string | null; raw: string } {
-  const fenceMatch = text.match(
-    /```[\w+-]*\s*\r?\n?([\s\S]*?)```/,
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(
+    /^```[\w+-]*\s*\r?\n([\s\S]*?)\r?\n```$/,
   );
 
   if (fenceMatch) {
-    const command = fenceMatch[1].trim();
-    return { command: command || null, raw: text };
+    const lines = fenceMatch[1]
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length !== 1 || /[\u0000-\u001f\u007f]/.test(lines[0])) {
+      return { command: null, raw: text };
+    }
+
+    return { command: lines[0], raw: text };
   }
 
-  const lines = text
+  const lines = trimmed
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   // 无代码块时，仅接受不含中文的单行内容作为命令
-  if (lines.length === 1 && !/[\u4e00-\u9fff]/.test(lines[0])) {
+  if (
+    lines.length === 1 &&
+    !/[\u4e00-\u9fff]/.test(lines[0]) &&
+    !/[\u0000-\u001f\u007f]/.test(lines[0])
+  ) {
     return { command: lines[0], raw: text };
   }
 
