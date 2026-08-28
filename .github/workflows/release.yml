@@ -35,7 +35,7 @@ jobs:
       - name: 验证 npm 登录状态
         run: |
           echo "registry: $(npm config get registry)"
-          npm whoami
+          npm whoami || echo "whoami 不可用（Granular token 无身份权限，属正常现象）"
 
       - name: 发布到 npm
         run: npm publish
