@@ -1,16 +1,16 @@
 import BetterSqlite3 from "better-sqlite3";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, mkdirSync } from "fs";
+import { mkdirSync } from "fs";
+import { migrateLegacyData, resolveDataDir, resolveLegacyDbPath } from "../paths.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// 数据库文件路径
-const dataDir = join(__dirname, "..", "..", "data");
-if (!existsSync(dataDir)) {
-  mkdirSync(dataDir, { recursive: true });
-}
+const dataDir = resolveDataDir();
+const legacyDbPath = resolveLegacyDbPath(__dirname);
+migrateLegacyData(dataDir, legacyDbPath);
+mkdirSync(dataDir, { recursive: true });
 
 const dbPath = join(dataDir, "daxia.db");
 

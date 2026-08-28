@@ -9,8 +9,7 @@ import { runOneShot } from "./app/one-shot.js";
 import { runExec } from "./app/exec.js";
 import { runCommit, runReview } from "./app/git-commands.js";
 import { runConfig } from "./app/config.js";
-
-const VERSION = "1.0.0";
+import { VERSION } from "./version.js";
 
 async function main(): Promise<void> {
   let args;
