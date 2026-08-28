@@ -13,7 +13,7 @@ export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "config"];
 export const CLI_NAME = "aic";
 
 export interface CliArgs {
-  mode: "one-shot" | "interactive" | "help" | "version";
+  mode: "one-shot" | "help" | "version";
   prompt: string;
   provider: ProviderName;
   model?: string;
@@ -38,7 +38,6 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
   ${CLI_NAME} config                     交互式配置模型（首次使用推荐）
-  ${CLI_NAME} -i                         进入交互式 REPL（旧模式）
 
 选项:
   -p, --provider <名>    指定模型提供方: auto | deepseek | api | ollama（默认 auto）
@@ -48,7 +47,6 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   -y, --yes              跳过确认，直接执行（用于 commit 子命令）
       --show             显示当前模型配置（配合 config 子命令）
       --no-stream        禁用流式输出，等待完整回答后一次性输出
-  -i, --interactive      进入交互式 REPL
   -h, --help             显示此帮助
   -v, --version          显示版本号
 
@@ -63,7 +61,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} -x "找出占用 8080 端口的进程并杀掉"
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
   ${CLI_NAME} commit && ${CLI_NAME} commit -y
-  ${CLI_NAME} review src/app/cli.ts
+  ${CLI_NAME} review src/app/one-shot.ts
   ${CLI_NAME} config
 `;
 
@@ -103,10 +101,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "-v":
       case "--version":
         result.mode = "version";
-        return result;
-      case "-i":
-      case "--interactive":
-        result.mode = "interactive";
         return result;
       case "-p":
       case "--provider": {

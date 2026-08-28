@@ -2,7 +2,7 @@
 /**
  * AI Call - 应用入口
  *
- * 职责：解析命令行参数，分发到一次性模式（默认）或交互式 REPL
+ * 职责：解析命令行参数，分发到一次性问答、命令执行或子命令
  */
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
@@ -34,13 +34,6 @@ async function main(): Promise<void> {
     case "version":
       process.stdout.write(`${CLI_NAME} ${VERSION}\n`);
       return;
-    case "interactive": {
-      // 延迟加载 REPL，避免一次性模式承担数据库启动开销
-      const { AiCallCLI } = await import("./app/cli.js");
-      const cli = new AiCallCLI();
-      await cli.start();
-      return;
-    }
     case "one-shot": {
       if (args.subcommand === "commit") {
         process.exitCode = await runCommit(args);

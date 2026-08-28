@@ -33,7 +33,7 @@
 - 💬 `-c` 上下文延续，自动带上一次对话（SQLite 持久化）
 - 🐙 Git 快捷子命令：`aic commit`（生成提交信息并提交）、`aic review`（代码评审）
 - 🧠 多模型自动选路：通用 API → DeepSeek → Ollama，可用 `-p`/`-m` 强制指定
-- 🖥️ 旧版交互式 REPL 保留（`aic -i`），按需加载
+- ⚙️ `aic config` 交互式配置向导，首次使用零门槛
 
 ---
 
@@ -139,12 +139,6 @@ aic review src/app      # 只评审指定路径
 
 `commit` 有暂存改动时只提交暂存内容，否则自动暂存已跟踪文件（不含未跟踪文件）。
 
-### 交互式 REPL（旧模式）
-
-```bash
-aic -i
-```
-
 ### 完整参数
 
 | 参数 | 说明 |
@@ -155,13 +149,38 @@ aic -i
 | `-c, --continue` | 带上一次对话的上下文 |
 | `-y, --yes` | 跳过确认直接执行（commit 子命令） |
 | `--no-stream` | 禁用流式输出，一次返回完整回答 |
-| `-i, --interactive` | 进入交互式 REPL |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
 ### 输出约定与退出码
 
 - 回答输出到 **stdout**，错误与状态提示输出到 **stderr**，管道不被污染
 - 退出码：`0` 成功或用户取消，`1` 出错，`2` 无法读取确认输入
+
+---
+
+## 项目结构
+
+```
+ai-call/
+├── src/
+│   ├── index.ts                    # 入口：参数路由
+│   └── app/
+│       ├── args.ts                 # 参数解析与帮助文本
+│       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
+│       ├── exec.ts                 # -x 命令生成与确认执行
+│       ├── git-commands.ts         # commit / review 子命令
+│       ├── config.ts               # aic config 配置向导
+│       ├── tty.ts                  # 终端确认输入与转圈提示
+│       └── assistant.ts            # 助手门面
+├── src/core/
+│   ├── ai/openClawClient.ts        # 模型客户端（多 provider、流式 SSE/NDJSON）
+│   └── database/index.ts           # SQLite 数据库
+├── .github/workflows/release.yml   # 打 tag 自动发 npm 包与 GitHub Release
+├── data/                           # 数据文件（SQLite 数据库等）
+├── package.json
+├── tsconfig.json
+└── .env.example
+```
 
 ---
 
