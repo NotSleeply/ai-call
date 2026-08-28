@@ -1,13 +1,14 @@
 /**
- * SmallClaw - 一次性执行模式
+ * AI Call - 一次性执行模式
  *
  * 职责：
  * - 检测 stdin 管道，与命令行 prompt 合并
  * - 流式输出回答到 stdout，错误与提示到 stderr
  * - 尽力持久化对话（数据库不可用时不影响主流程）
  */
-import { DaxiaAssistant } from "./assistant.js";
+import { AiCallAssistant } from "./assistant.js";
 import type { ChatGenerationOptions } from "../core/ai/openClawClient.js";
+import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
 
 async function readStdinIfPiped(): Promise<string> {
@@ -92,18 +93,20 @@ export async function runOneShot(args: CliArgs): Promise<number> {
   const question = (await buildQuestion(args.prompt, stdinText)).trim();
 
   if (!question) {
-    process.stderr.write('sc: 请提供问题，例如: sc "tar 解压 tar.gz 的命令"\n');
-    process.stderr.write("运行 sc --help 查看完整用法\n");
+    process.stderr.write(
+      `${CLI_NAME}: 请提供问题，例如: ${CLI_NAME} "tar 解压 tar.gz 的命令"\n`,
+    );
+    process.stderr.write(`运行 ${CLI_NAME} --help 查看完整用法\n`);
     return 1;
   }
 
   const history = args.continueSession ? await loadRecentHistory() : [];
 
   if (args.continueSession && history.length === 0) {
-    process.stderr.write("sc: 未找到可延续的历史对话，本次以全新上下文提问\n");
+    process.stderr.write(`${CLI_NAME}: 未找到可延续的历史对话，本次以全新上下文提问\n`);
   }
 
-  const assistant = new DaxiaAssistant();
+  const assistant = new AiCallAssistant();
 
   const options: ChatGenerationOptions = {
     forceProvider: args.provider === "auto" ? undefined : args.provider,
@@ -142,7 +145,7 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     return 0;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`sc: ${msg}\n`);
+    process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;
   }
 }

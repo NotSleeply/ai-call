@@ -1,5 +1,5 @@
 /**
- * SmallClaw - 命令生成与安全确认执行模式（-x / --exec）
+ * AI Call - 命令生成与安全确认执行模式（-x / --exec）
  *
  * 职责：
  * - 调用模型生成可执行命令（专用 system prompt + 代码块约束）
@@ -7,9 +7,10 @@
  * - stdin 被管道占用时从控制台（CONIN$ / /dev/tty）读取确认输入
  */
 import { spawn } from "child_process";
-import { DaxiaAssistant } from "./assistant.js";
+import { AiCallAssistant } from "./assistant.js";
 import { askConfirmation, isConfirmYes } from "./tty.js";
 import { buildQuestion, loadRecentHistory, readStdinIfPiped } from "./one-shot.js";
+import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
 
 const SHELL_INFO = ((): string => {
@@ -65,7 +66,7 @@ function runCommand(command: string): Promise<number> {
     });
 
     child.on("error", (error) => {
-      process.stderr.write(`sc: 执行失败: ${error.message}\n`);
+      process.stderr.write(`${CLI_NAME}: 执行失败: ${error.message}\n`);
       resolve(1);
     });
 
@@ -81,14 +82,14 @@ export async function runExec(args: CliArgs): Promise<number> {
 
   if (!question) {
     process.stderr.write(
-      'sc: 请提供任务描述，例如: sc -x "找出占用 8080 端口的进程"\n',
+      `${CLI_NAME}: 请提供任务描述，例如: ${CLI_NAME} -x "找出占用 8080 端口的进程"\n`,
     );
     return 1;
   }
 
   const history = args.continueSession ? await loadRecentHistory() : [];
 
-  const assistant = new DaxiaAssistant();
+  const assistant = new AiCallAssistant();
   const options = {
     forceProvider: args.provider === "auto" ? undefined : args.provider,
   };
@@ -101,7 +102,7 @@ export async function runExec(args: CliArgs): Promise<number> {
     });
   }
 
-  process.stderr.write("sc: 正在生成命令...\n");
+  process.stderr.write(`${CLI_NAME}: 正在生成命令...\n`);
 
   let raw: string;
 
@@ -109,14 +110,14 @@ export async function runExec(args: CliArgs): Promise<number> {
     raw = await assistant.runSkillTask(EXEC_SYSTEM_PROMPT, question, history, options);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`sc: ${msg}\n`);
+    process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;
   }
 
   const { command, raw: rawText } = extractCommand(raw);
 
   if (!command) {
-    process.stderr.write("sc: 未能从回答中提取出可执行命令，模型原文如下:\n\n");
+    process.stderr.write(`${CLI_NAME}: 未能从回答中提取出可执行命令，模型原文如下:\n\n`);
     process.stderr.write(`${rawText}\n`);
     return 1;
   }
@@ -125,12 +126,12 @@ export async function runExec(args: CliArgs): Promise<number> {
   const answer = await askConfirmation("执行? [y/N]: ");
 
   if (answer === "") {
-    process.stderr.write("sc: 无法读取确认输入，已取消执行\n");
+    process.stderr.write(`${CLI_NAME}: 无法读取确认输入，已取消执行\n`);
     return 2;
   }
 
   if (!isConfirmYes(answer)) {
-    process.stderr.write("sc: 已取消\n");
+    process.stderr.write(`${CLI_NAME}: 已取消\n`);
     return 0;
   }
 

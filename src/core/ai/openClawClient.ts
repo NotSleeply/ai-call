@@ -55,10 +55,10 @@ const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 
 
 现在，等待用户指令。`;
 
-// 依次尝试当前目录 .env 与用户级 ~/.smallclaw/.env（前面的优先）
+// 依次尝试当前目录 .env 与用户级 ~/.ai-call/.env（前面的优先）
 loadDotEnv({
   quiet: true,
-  path: [".env", join(homedir(), ".smallclaw", ".env")],
+  path: [".env", join(homedir(), ".ai-call", ".env")],
 });
 
 export class OpenClawClient {
@@ -123,8 +123,8 @@ export class OpenClawClient {
     (
       process.env.MODEL_API_APP_NAME ||
       process.env.OPENROUTER_APP_NAME ||
-      "SmallClaw"
-    ).trim() || "SmallClaw";
+      "ai-call"
+    ).trim() || "ai-call";
 
   private readonly openClawSystemPrompt = DEFAULT_OPENCLAW_SYSTEM_PROMPT;
 

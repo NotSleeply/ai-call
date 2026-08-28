@@ -30,9 +30,9 @@ const HELP_TEXT = `
 `;
 
 /**
- * 大虾助手门面类
+ * AI Call 助手门面类
  */
-export class DaxiaAssistant {
+export class AiCallAssistant {
   private readonly openClawClient = new OpenClawClient();
   private readonly fileSystemService = new FileSystemService();
   private readonly multiAgentService = new MultiAgentService(

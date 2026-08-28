@@ -12,7 +12,7 @@ export class MultiAgentService {
   async runCollaboration(task?: string): Promise<void> {
     const objective =
       task?.trim() ||
-      "为 SmallClaw 设计一次可落地的版本迭代，覆盖前端、后端和验证步骤";
+      "为 AI Call 设计一次可落地的版本迭代，覆盖前端、后端和验证步骤";
 
     console.log("\n🤝 多 Agent 协同演示");
     console.log("═".repeat(60));

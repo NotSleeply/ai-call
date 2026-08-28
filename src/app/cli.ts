@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 import { createInterface } from "readline";
-import { DaxiaAssistant } from "./assistant.js";
+import { AiCallAssistant } from "./assistant.js";
 import { Database } from "../core/database/index.js";
 
 /**
- * SmallClaw CLI - 命令行交互层
+ * AI Call CLI - 命令行交互层
  *
  * 职责：处理用户输入、命令分发、对话管理
  */
-export class SmallClawCLI {
-  private assistant: DaxiaAssistant;
+export class AiCallCLI {
+  private assistant: AiCallAssistant;
   private rl: ReturnType<typeof createInterface>;
   private db: ReturnType<(typeof Database)["getInstance"]>;
   private currentConversationId: number | null = null;
 
   constructor() {
-    this.assistant = new DaxiaAssistant();
+    this.assistant = new AiCallAssistant();
     this.rl = createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -32,7 +32,7 @@ export class SmallClawCLI {
   private printWelcome(): void {
     console.log("");
     console.log("╔══════════════════════════════════════════════════════════╗");
-    console.log("║           🦐 SmallClaw - 大虾AI编程助手 v1.0            ║");
+    console.log("║           🦐 AI Call - AI编程助手 v1.0                    ║");
     console.log("╠══════════════════════════════════════════════════════════╣");
     console.log("║  输入 help 查看可用命令                                  ║");
     console.log("║  输入 exit 退出程序                                      ║");
@@ -121,7 +121,7 @@ export class SmallClawCLI {
         if (!trimmed) continue;
 
         if (trimmed.toLowerCase() === "exit") {
-          console.log("\n👋 再见！感谢使用 SmallClaw！\n");
+          console.log("\n👋 再见！感谢使用 AI Call！\n");
           this.rl.close();
           break;
         }
@@ -253,7 +253,7 @@ export class SmallClawCLI {
     console.log("─".repeat(50));
 
     for (const msg of messages) {
-      const prefix = msg.role === "user" ? "👤 你" : "🦐 大虾";
+      const prefix = msg.role === "user" ? "👤 你" : "🦐 aic";
       const time = new Date(msg.timestamp).toLocaleTimeString();
       console.log(`[${time}] ${prefix}:`);
       console.log(msg.content);

@@ -1,20 +1,20 @@
-# SmallClaw — 大虾（AI 编程助手）
+# AI Call — 终端 AI 助手（aic）
 
 ## 定位与核心需求
 
 1. **单次命令调用（One-shot First）**
    - 不进入任何交互界面，直接通过命令参数触发。
-   - 例如：`sc "tar 解压到指定目录的参数是什么"` 或 `sc -f index.ts "帮我把这个函数转成 async"`。
+   - 例如：`aic "tar 解压到指定目录的参数是什么"` 或 `aic -f index.ts "帮我把这个函数转成 async"`。
    - 结果直接流式打在当前终端，不产生多余的边框和欢迎语。
 
 2. **原生支持 Unix 管道（Pipe-friendly）**
    - 支持从标准输入（stdin）读取内容。
-   - 例如：`git diff | sc "生成一行符合规范的 commit message"`，或者 `cat error.log | sc "提取出最核心的报错原因"`。
+   - 例如：`git diff | aic "生成一行符合规范的 commit message"`，或者 `cat error.log | aic "提取出最核心的报错原因"`。
    - 输出纯净文本，方便进一步重定向到文件或下一个命令。
 
 3. **Shell 命令生成与安全确认执行**
    - 终端里最高频的痛点是记不住复杂命令（如 find、ffmpeg、docker、git 等）。
-   - 提供执行标志（如 `sc -x "找出占用 8080 端口的进程并杀掉"`），AI 生成精准命令，按下回车直接运行，按取消即放弃。
+   - 提供执行标志（如 `aic -x "找出占用 8080 端口的进程并杀掉"`），AI 生成精准命令，按下回车直接运行，按取消即放弃。
 
 4. **无缝上下文延续（可选 Context）**
    - 默认无状态，保证极速响应。
@@ -23,108 +23,156 @@
 
 **特性**：
 
-- 🖥️ 纯 CLI 交互模式（REPL）
-- 📁 文件操作：读取、写入、搜索、列出目录
-- 💻 系统命令执行
-- 🧠 智能能力：项目分析、智能问答
-- 🤝 多 Agent 协同工作
-- 🎯 Skill 管理：可注册自定义 Skill 模块
-- 💬 对话记录：SQLite 持久化存储
-- 🤖 支持 Ollama 本地模型
+- ⚡ 单次调用为主，`aic <问题>` 即问即走，流式输出
+- 🔗 管道友好：stdin 内容与提问合并，回答纯净可继续管道
+- 🛠️ `-x` 命令生成 + 确认执行，支持交互确认与 `-y` 跳过
+- 💬 `-c` 上下文延续，自动带上一次对话（SQLite 持久化）
+- 🐙 Git 快捷子命令：`aic commit`（生成提交信息并提交）、`aic review`（代码评审）
+- 🧠 多模型自动选路：通用 API → DeepSeek → Ollama，可用 `-p`/`-m` 强制指定
+- 🖥️ 旧版交互式 REPL 保留（`aic -i`），按需加载
 
 ---
 
-## 快速开始
+## 安装
 
-**先决条件**：Node.js（推荐 18+）、`pnpm`。
-
-### 1. 安装依赖
+**先决条件**：Node.js 20+、pnpm。
 
 ```bash
 pnpm install
+pnpm run build
+
+# 链接为全局命令（aic）
+npm link
 ```
 
-### 2. 配置
+---
 
-在项目根目录创建 `.env` 文件（或复制 `.env.example`）：
+## 配置
+
+模型配置按以下顺序读取（前面的优先）：
+
+1. 当前目录的 `.env`
+2. 用户级 `~/.ai-call/.env`（任意目录可用 `aic`）
+
+可复制 `.env.example` 起步：
 
 ```bash
+# 通用 API（优先级最高，兼容 OpenRouter/OpenAI 等 OpenAI 格式服务）
+MODEL_API_KEY=你的Key
+MODEL_API_MODEL=gpt-5-mini
+MODEL_API_BASE_URL=https://openrouter.ai/api/v1
+
+# DeepSeek
 DEEPSEEK_API_KEY=你的DeepSeekKey
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-MODEL_API_KEY=你的统一模型APIKey
-MODEL_API_BASE_URL=https://openrouter.ai/api/v1
-MODEL_API_MODEL=gpt-5-mini
+
+# 本地 Ollama
 OLLAMA_HOST=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen3:latest
 ```
 
-说明：系统会按优先级选择模型来源（`MODEL_API_*` → `DEEPSEEK_*` → 本地 `OLLAMA_*`）。未配置任何外部 Key 时可配合本地 Ollama 使用。
-
-### 3. 构建
-
-```bash
-pnpm run build
-```
-
-### 4. 运行
-
-```bash
-pnpm start
-```
+自动模式下模型选路顺序：`MODEL_API_*` → `DEEPSEEK_*` → 本地 `OLLAMA_*`。未配置任何外部 Key 时可仅用本地 Ollama。
 
 ---
 
-## 常用命令
+## 使用方式
 
-| 命令                  | 说明             | 示例                      |
-| --------------------- | ---------------- | ------------------------- |
-| `help`                | 显示帮助信息     | `help`                    |
-| `read <文件>`         | 读取文件内容     | `read package.json`       |
-| `write <文件> <内容>` | 写入文件         | `write demo.txt 你好世界` |
-| `list [目录]`         | 列出目录内容     | `list src`                |
-| `search <关键词>`     | 搜索代码关键词   | `search function`         |
-| `exec <命令>`         | 执行系统命令     | `exec dir`                |
-| `analyze`             | 分析当前项目结构 | `analyze`                 |
-| `ask <问题>`          | 智能提问         | `ask 什么是 TypeScript？` |
-| `agents [任务]`       | 多 Agent 协同    | `agents 设计REST API`     |
-| `ollama <问题>`       | 使用本地 Ollama  | `ollama 解释闭包`         |
-| `new`                 | 开始新对话       | `new`                     |
-| `history`             | 查看对话历史     | `history`                 |
-| `exit`                | 退出程序         | `exit`                    |
+### 单次问答
 
-**提示**：输入任意其他内容将进入智能问答模式。
+```bash
+aic "tar 解压 tar.gz 的命令是什么"
+```
 
----
+回答流式输出到 stdout，问完即退，无欢迎语、无边框。
 
-## Skill 系统
+### 管道输入
 
-项目支持自定义 Skill 模块，位于 `skills/` 目录：
+```bash
+git diff | aic "生成一行符合规范的 commit message"
+cat error.log | aic "总结最核心的报错原因"
+echo "hello" | aic          # 直接处理管道内容
+```
 
-- `repo-auto-backup.skill.js` — 备份仓库到目标目录（示例 JS Skill）
-- `batch-add-file-prefix.skill.py` — 批量给文件名加前缀（示例 Python Skill）
+管道内容会作为上下文与提问合并；回答只进 stdout，可直接重定向或继续管道。
 
-Skill 可以以模块形式被触发并执行复杂任务。
+### 命令生成与确认执行（-x）
+
+```bash
+aic -x "找出占用 8080 端口的进程并杀掉"
+```
+
+AI 生成命令后展示并询问 `执行? [y/N]`，输入 y 执行，其他取消。Windows 下自动生成 cmd 语法（`dir`/`tasklist`），Linux/macOS 生成 bash。
+
+### 上下文延续（-c）
+
+```bash
+aic "用一句话解释这个报错"
+aic -c "换一种说法"
+```
+
+`-c` 自动带上一次对话的上下文（最近 12 条），无需打开会话窗口。
+
+### Git 快捷子命令
+
+```bash
+aic commit              # 读取改动生成约定式提交信息，确认后提交
+aic commit -y           # 跳过确认直接提交
+aic commit "强调性能优化"  # 附加生成要求
+aic review              # 评审未提交的改动
+aic review src/app      # 只评审指定路径
+```
+
+`commit` 有暂存改动时只提交暂存内容，否则自动暂存已跟踪文件（不含未跟踪文件）。
+
+### 交互式 REPL（旧模式）
+
+```bash
+aic -i
+```
+
+### 完整参数
+
+| 参数 | 说明 |
+| --- | --- |
+| `-p, --provider <名>` | 模型提供方：`auto` \| `deepseek` \| `api` \| `ollama`（默认 auto） |
+| `-m, --model <名>` | 指定模型名，覆盖 `.env` 配置 |
+| `-x, --exec` | 生成命令并确认后执行 |
+| `-c, --continue` | 带上一次对话的上下文 |
+| `-y, --yes` | 跳过确认直接执行（commit 子命令） |
+| `--no-stream` | 禁用流式输出，一次返回完整回答 |
+| `-i, --interactive` | 进入交互式 REPL |
+| `-h, --help` / `-v, --version` | 帮助 / 版本 |
+
+### 输出约定与退出码
+
+- 回答输出到 **stdout**，错误与状态提示输出到 **stderr**，管道不被污染
+- 退出码：`0` 成功或用户取消，`1` 出错，`2` 无法读取确认输入
 
 ---
 
 ## 项目结构
 
-```bash
-SmallClaw/
-├── src/                          # 源代码
-│   ├── index.ts                  # CLI 入口（REPL 交互）
-│   ├── assistant.ts              # 核心助手类
-│   ├── database.ts               # SQLite 数据库
-│   └── assistant_modules/        # 功能模块
-│       ├── core/                 # 核心客户端（OpenClaw）
-│       ├── services/             # 业务服务
-│       └── utils/                # 工具函数
-├── skills/                       # 自定义 Skill 模块
-├── data/                         # 数据文件（SQLite 数据库等）
-├── package.json                  # 项目配置
-├── tsconfig.json                 # TypeScript 配置
-└── .env.example                  # 环境变量示例
+```
+ai-call/
+├── src/
+│   ├── index.ts                    # 入口：参数路由
+│   └── app/
+│       ├── args.ts                 # 参数解析与帮助文本
+│       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
+│       ├── exec.ts                 # -x 命令生成与确认执行
+│       ├── git-commands.ts         # commit / review 子命令
+│       ├── tty.ts                  # 终端确认输入（管道占用时读 CONIN$//dev/tty）
+│       ├── assistant.ts            # 助手门面
+│       └── cli.ts                  # 旧版 REPL（aic -i）
+├── src/core/
+│   ├── ai/openClawClient.ts        # 模型客户端（多 provider、流式 SSE/NDJSON）
+│   ├── database/index.ts           # SQLite 数据库
+│   └── services/                   # 文件服务、多 Agent 协同
+├── data/                           # 数据文件（SQLite 数据库等）
+├── package.json
+├── tsconfig.json
+└── .env.example
 ```
 
 ---
@@ -132,12 +180,18 @@ SmallClaw/
 ## 常见问题
 
 **Q: 命令不可用？**
-A: 请确认已在项目根目录执行 `pnpm install` 和 `pnpm run build`。
+A: 确认已执行 `pnpm install`、`pnpm run build`、`npm link`。
+
+**Q: 提示 API 401 / 找不到 Key？**
+A: 检查 `.env` 或 `~/.ai-call/.env` 是否配置了 `MODEL_API_KEY` 等；也可用 `-p` 强制指定已配置的提供方。
 
 **Q: 本地 Ollama 无响应？**
-A: 确认本地 Ollama 服务已启动并且 `.env` 中 `OLLAMA_HOST` 配置正确。
+A: 确认 Ollama 服务已启动且 `OLLAMA_HOST` 配置正确，可先 `ollama pull qwen3`。
 
-**Q: 如何添加新功能？**
-A: 在 `src/assistant_modules/services/` 下创建新的服务类，并在 `assistant.ts` 中集成。
+**Q: `aic` 在非项目目录用不了模型？**
+A: 把密钥配置放到用户级 `~/.ai-call/.env` 即可在任意目录使用。
+
+**Q: 数据库报原生绑定错误？**
+A: Node 版本变更后需 `pnpm rebuild better-sqlite3`；持久化失败不影响问答主流程。
 
 ---

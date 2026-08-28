@@ -1,5 +1,5 @@
 /**
- * SmallClaw - 终端确认输入
+ * AI Call - 终端确认输入
  *
  * 职责：
  * - stdin 是 TTY 时用 readline 询问确认

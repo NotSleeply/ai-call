@@ -1,7 +1,7 @@
 /**
- * SmallClaw - 命令行参数解析
+ * AI Call - 命令行参数解析
  *
- * 职责：解析 sc [选项] <问题> 参数，输出干净的提示文本
+ * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
 export type ProviderName = "auto" | "deepseek" | "api" | "ollama";
@@ -9,6 +9,8 @@ export type ProviderName = "auto" | "deepseek" | "api" | "ollama";
 export type SubcommandName = "commit" | "review";
 
 export const SUBCOMMANDS: SubcommandName[] = ["commit", "review"];
+
+export const CLI_NAME = "aic";
 
 export interface CliArgs {
   mode: "one-shot" | "interactive" | "help" | "version";
@@ -24,17 +26,17 @@ export interface CliArgs {
 
 export class CliArgError extends Error {}
 
-export const USAGE_TEXT = `SmallClaw - 大虾 AI 终端助手
+export const USAGE_TEXT = `AI Call - 终端 AI 助手
 
 用法:
-  sc [选项] <问题>              提问并流式输出回答
-  echo <内容> | sc <问题>       管道内容作为上下文再提问
-  echo <内容> | sc              直接处理管道内容
-  sc -x <任务>                  生成命令，确认后执行
-  sc -c <问题>                  带上上一次对话的上下文继续提问
-  sc commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
-  sc review [路径...]           对未提交改动进行代码评审
-  sc -i                         进入交互式 REPL（旧模式）
+  ${CLI_NAME} [选项] <问题>              提问并流式输出回答
+  echo <内容> | ${CLI_NAME} <问题>       管道内容作为上下文再提问
+  echo <内容> | ${CLI_NAME}              直接处理管道内容
+  ${CLI_NAME} -x <任务>                  生成命令，确认后执行
+  ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
+  ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
+  ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
+  ${CLI_NAME} -i                         进入交互式 REPL（旧模式）
 
 选项:
   -p, --provider <名>    指定模型提供方: auto | deepseek | api | ollama（默认 auto）
@@ -52,13 +54,13 @@ export const USAGE_TEXT = `SmallClaw - 大虾 AI 终端助手
   错误与提示输出到 stderr，不会污染管道。
 
 示例:
-  sc "tar 解压 tar.gz 的命令是什么"
-  git diff | sc "生成一行符合规范的 commit message"
-  cat error.log | sc "总结最核心的报错原因"
-  sc -x "找出占用 8080 端口的进程并杀掉"
-  sc "用一句话解释这个报错" && sc -c "换一种说法"
-  sc commit && sc commit -y
-  sc review src/app/cli.ts
+  ${CLI_NAME} "tar 解压 tar.gz 的命令是什么"
+  git diff | ${CLI_NAME} "生成一行符合规范的 commit message"
+  cat error.log | ${CLI_NAME} "总结最核心的报错原因"
+  ${CLI_NAME} -x "找出占用 8080 端口的进程并杀掉"
+  ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
+  ${CLI_NAME} commit && ${CLI_NAME} commit -y
+  ${CLI_NAME} review src/app/cli.ts
 `;
 
 const PROVIDERS: ProviderName[] = ["auto", "deepseek", "api", "ollama"];
@@ -138,7 +140,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
         break;
       default:
         if (arg.startsWith("-") && arg !== "-") {
-          throw new CliArgError(`未知选项: ${arg}，运行 sc --help 查看用法`);
+          throw new CliArgError(
+            `未知选项: ${arg}，运行 ${CLI_NAME} --help 查看用法`,
+          );
         }
         if (
           !onlyPositional &&
