@@ -35,13 +35,15 @@
 
 ## 安装
 
-**先决条件**：Node.js 20+、pnpm。
+**先决条件**：Node.js 20+。
 
 ```bash
+# 方式一：npm 全局安装（发布版）
+npm install -g ai-call-cli
+
+# 方式二：源码安装
 pnpm install
 pnpm run build
-
-# 链接为全局命令（aic）
 npm link
 ```
 
@@ -151,6 +153,32 @@ aic -i
 
 ---
 
+## 关于项目
+
+**Q: 为什么做这个项目？**
+
+A: 两个痛点。一是很多 AI 编程助手把 TUI/REPL 做得很「重」：启动慢、输出带边框横幅，人在终端里工作流被打断，为了一句「tar 解压参数是什么」也得开一个会话。二是 Claude Code 这类 Agent 已经很强，但它定位是接管整个项目，而终端里大量问题是小、快、即问即走型的。我们想要一个符合 Unix 哲学的工具：一次调用、支持管道、用完即退，像 `grep`、`jq` 一样融进日常命令流。
+
+**Q: 已经有 Claude Code / Copilot 了，为什么还要 AI Call？**
+
+A: 定位不同，不是替代关系。Claude Code 是项目级 Agent，负责多文件改造、测试、调试这种长任务；AI Call 是终端级「外脑」，解决高频小问题：记不住命令、快速解释报错、生成 commit message、代码评审。AI Call 刻意不做工具调用和文件改写，把交互成本压到一行命令。两者配合使用：Agent 做项目，AI Call 做终端。
+
+**Q: AI Call 的优势是什么？**
+
+A:
+
+- **轻**：无 TUI、无横幅，`aic "..."` 一行即答，首 token 秒级返回，等待期有转圈提示
+- **纯**：回答只进 stdout，管道可直接接续（`git diff | aic "写 commit message"`），脚本友好
+- **安全**：`-x` 生成的命令必须人工确认才执行；`commit`/`review` 只做明确的事
+- **自由**：模型不锁定厂商，通用 API / DeepSeek / Ollama 自动选路，本地模型也能用
+- **低依赖**：只装 Node，配置一个 `.env` 就能跑
+
+**Q: 和 `claude -p`、`gh copilot` 这类命令有什么不同？**
+
+A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/stderr 严格分离保证管道纯净；`-x` 的命令确认执行机制；`commit`/`review` 这类开箱即用的 Git 子命令。另外不绑定任何单一模型厂商。
+
+---
+
 ## 项目结构
 
 ```
@@ -162,13 +190,14 @@ ai-call/
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
 │       ├── exec.ts                 # -x 命令生成与确认执行
 │       ├── git-commands.ts         # commit / review 子命令
-│       ├── tty.ts                  # 终端确认输入（管道占用时读 CONIN$//dev/tty）
+│       ├── tty.ts                  # 终端确认输入与转圈提示
 │       ├── assistant.ts            # 助手门面
 │       └── cli.ts                  # 旧版 REPL（aic -i）
 ├── src/core/
 │   ├── ai/openClawClient.ts        # 模型客户端（多 provider、流式 SSE/NDJSON）
 │   ├── database/index.ts           # SQLite 数据库
 │   └── services/                   # 文件服务、多 Agent 协同
+├── .github/workflows/release.yml   # 打 tag 自动发 npm 包与 GitHub Release
 ├── data/                           # 数据文件（SQLite 数据库等）
 ├── package.json
 ├── tsconfig.json
