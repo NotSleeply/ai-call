@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
-    name: 构建并发布 npm 包
+  publish-npm:
+    name: 发布 npm 包
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
@@ -34,6 +34,28 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    name: 创建 GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
 
       - name: 生成发布包
         run: npm pack
