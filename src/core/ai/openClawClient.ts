@@ -64,7 +64,8 @@ loadDotEnv({
 export class OpenClawClient {
   private readonly deepSeekApiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
   private readonly deepSeekModel =
-    (process.env.DEEPSEEK_MODEL || "deepseek-chat").trim() || "deepseek-chat";
+    (process.env.DEEPSEEK_MODEL || "deepseek-v4-flash").trim() ||
+    "deepseek-v4-flash";
   private readonly deepSeekBaseUrl =
     (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").trim() ||
     "https://api.deepseek.com";

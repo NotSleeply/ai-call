@@ -18,6 +18,8 @@ import type { CliArgs } from "./args.js";
 
 type ProviderId = "api" | "deepseek" | "ollama";
 
+export const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash";
+
 interface FieldSpec {
   key: string;
   label: string;
@@ -32,7 +34,7 @@ interface ProviderSpec {
   fields: FieldSpec[];
 }
 
-const PROVIDERS: ProviderSpec[] = [
+export const PROVIDERS: ProviderSpec[] = [
   {
     id: "api",
     name: "通用 API（OpenAI 兼容）",
@@ -69,15 +71,10 @@ const PROVIDERS: ProviderSpec[] = [
         defaultFor: () => "",
       },
       {
-        key: "DEEPSEEK_BASE_URL",
-        label: "API 地址",
-        defaultFor: (env) =>
-          env.get("DEEPSEEK_BASE_URL") ?? "https://api.deepseek.com",
-      },
-      {
         key: "DEEPSEEK_MODEL",
         label: "模型名",
-        defaultFor: (env) => env.get("DEEPSEEK_MODEL") ?? "deepseek-chat",
+        defaultFor: (env) =>
+          env.get("DEEPSEEK_MODEL") ?? DEFAULT_DEEPSEEK_MODEL,
       },
     ],
   },
