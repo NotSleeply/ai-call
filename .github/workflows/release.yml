@@ -38,6 +38,8 @@ jobs:
   github-release:
     name: 创建 GitHub Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
