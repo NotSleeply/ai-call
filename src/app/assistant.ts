@@ -147,4 +147,20 @@ export class DaxiaAssistant {
       options,
     );
   }
+
+  async runSkillTaskStream(
+    skillPrompt: string,
+    task: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
+    onDelta: (delta: string) => void = () => {},
+  ): Promise<string> {
+    return this.openClawClient.generateWithSystemPromptStream(
+      skillPrompt,
+      task,
+      conversationHistory,
+      options,
+      onDelta,
+    );
+  }
 }

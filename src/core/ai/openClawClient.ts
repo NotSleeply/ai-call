@@ -1,4 +1,6 @@
 import { config as loadDotEnv } from "dotenv";
+import { homedir } from "os";
+import { join } from "path";
 
 type ChatRole = "system" | "user" | "assistant";
 
@@ -53,7 +55,11 @@ const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 
 
 现在，等待用户指令。`;
 
-loadDotEnv({ quiet: true });
+// 依次尝试当前目录 .env 与用户级 ~/.smallclaw/.env（前面的优先）
+loadDotEnv({
+  quiet: true,
+  path: [".env", join(homedir(), ".smallclaw", ".env")],
+});
 
 export class OpenClawClient {
   private readonly deepSeekApiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
@@ -947,5 +953,27 @@ export class OpenClawClient {
     );
 
     return this.generateByOptions(messages, options);
+  }
+
+  async generateWithSystemPromptStream(
+    systemPrompt: string,
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
+    onDelta: (delta: string) => void = () => {},
+  ): Promise<string> {
+    const question = userInput.trim();
+
+    if (!question) {
+      throw new Error("请输入要让 skill 处理的任务内容。");
+    }
+
+    const messages = this.buildMessages(
+      systemPrompt.trim() || this.openClawSystemPrompt,
+      question,
+      conversationHistory,
+    );
+
+    return this.generateByOptionsStream(messages, options, onDelta);
   }
 }

@@ -47,18 +47,60 @@ async function persistExchange(
   }
 }
 
+/**
+ * 加载最近一次 CLI 对话的历史消息，用于 -c 上下文延续。
+ * 数据库不可用时返回空数组（降级为全新上下文）。
+ */
+export async function loadRecentHistory(
+  limit: number = 12,
+): Promise<Array<{ role: string; content: string }>> {
+  try {
+    const { Database } = await import("../core/database/index.js");
+    const db = Database.getInstance();
+
+    const conversation = db
+      .getConversations()
+      .find((item) => item.title === "CLI 对话");
+
+    if (!conversation) {
+      return [];
+    }
+
+    return db
+      .getMessages(conversation.id)
+      .slice(-limit)
+      .map((msg) => ({ role: msg.role, content: msg.content }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 合并 stdin 管道内容与命令行 prompt。
+ */
+export async function buildQuestion(
+  prompt: string,
+  stdinText: string,
+): Promise<string> {
+  return stdinText ? (prompt ? `${stdinText}\n\n---\n${prompt}` : stdinText) : prompt;
+}
+
+export { readStdinIfPiped };
+
 export async function runOneShot(args: CliArgs): Promise<number> {
   const stdinText = await readStdinIfPiped();
-  let question = args.prompt;
+  const question = (await buildQuestion(args.prompt, stdinText)).trim();
 
-  if (stdinText) {
-    question = question ? `${stdinText}\n\n---\n${question}` : stdinText;
-  }
-
-  if (!question.trim()) {
+  if (!question) {
     process.stderr.write('sc: 请提供问题，例如: sc "tar 解压 tar.gz 的命令"\n');
     process.stderr.write("运行 sc --help 查看完整用法\n");
     return 1;
+  }
+
+  const history = args.continueSession ? await loadRecentHistory() : [];
+
+  if (args.continueSession && history.length === 0) {
+    process.stderr.write("sc: 未找到可延续的历史对话，本次以全新上下文提问\n");
   }
 
   const assistant = new DaxiaAssistant();
@@ -79,14 +121,14 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     if (args.stream) {
       answer = await assistant.generateOpenClawReplyStream(
         question,
-        [],
+        history,
         options,
         (delta) => {
           process.stdout.write(delta);
         },
       );
     } else {
-      answer = await assistant.generateOpenClawReply(question, [], options);
+      answer = await assistant.generateOpenClawReply(question, history, options);
       if (answer) {
         process.stdout.write(answer);
       }

@@ -6,6 +6,8 @@
  */
 import { CliArgError, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
+import { runExec } from "./app/exec.js";
+import { runCommit, runReview } from "./app/git-commands.js";
 
 const VERSION = "1.0.0";
 
@@ -38,9 +40,18 @@ async function main(): Promise<void> {
       await cli.start();
       return;
     }
-    case "one-shot":
-      process.exitCode = await runOneShot(args);
+    case "one-shot": {
+      if (args.subcommand === "commit") {
+        process.exitCode = await runCommit(args);
+      } else if (args.subcommand === "review") {
+        process.exitCode = await runReview(args);
+      } else if (args.exec) {
+        process.exitCode = await runExec(args);
+      } else {
+        process.exitCode = await runOneShot(args);
+      }
       return;
+    }
   }
 }
 
