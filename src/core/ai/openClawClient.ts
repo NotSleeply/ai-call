@@ -53,7 +53,7 @@ const DEFAULT_OPENCLAW_SYSTEM_PROMPT = `你是一个专业、可靠、安全的 
 
 现在，等待用户指令。`;
 
-loadDotEnv();
+loadDotEnv({ quiet: true });
 
 export class OpenClawClient {
   private readonly deepSeekApiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
@@ -474,11 +474,406 @@ export class OpenClawClient {
       : "自动选模失败：未获取到可用回复。";
   }
 
-  async generateReply(
+  private async readResponseLines(
+    response: Response,
+    onLine: (line: string) => void,
+  ): Promise<void> {
+    if (!response.body) {
+      throw new Error("响应体为空，无法读取流式内容");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        onLine(line);
+      }
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      onLine(buffer);
+    }
+  }
+
+  private async requestDeepSeekStream(
+    messages: ChatMessage[],
+    onDelta: (delta: string) => void,
+    modelOverride?: string,
+  ): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveDeepSeekEndpoints()) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.deepSeekApiKey}`,
+          },
+          body: JSON.stringify({
+            model: (modelOverride || "").trim() || this.deepSeekModel,
+            messages,
+            temperature: 0.7,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        let fullText = "";
+        let receivedDelta = false;
+
+        await this.readResponseLines(response, (line) => {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) return;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") return;
+
+          try {
+            const data = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            const delta = data.choices?.[0]?.delta?.content;
+            if (typeof delta === "string" && delta.length > 0) {
+              fullText += delta;
+              receivedDelta = true;
+              onDelta(delta);
+            }
+          } catch {
+            // 忽略无法解析的流式数据块
+          }
+        });
+
+        if (receivedDelta) {
+          return fullText.trim();
+        }
+
+        // 流式无增量时退回非流式请求
+        const fallback = await this.requestDeepSeek(messages, modelOverride);
+        if (fallback) {
+          onDelta(fallback);
+          return fallback;
+        }
+
+        lastError = "DeepSeek 返回了空内容";
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    throw new Error(lastError || "DeepSeek 请求失败");
+  }
+
+  private async requestOllamaStream(
+    messages: ChatMessage[],
+    onDelta: (delta: string) => void,
+    modelOverride?: string,
+  ): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveOllamaEndpoints()) {
+      try {
+        const model = await this.resolveOllamaModel(endpoint, modelOverride);
+        const response = await fetch(`${endpoint}/api/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            stream: true,
+            messages,
+            options: {
+              temperature: 0.7,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        let fullText = "";
+        let receivedDelta = false;
+
+        await this.readResponseLines(response, (line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return;
+
+          try {
+            const data = JSON.parse(trimmed) as {
+              message?: { content?: string };
+            };
+            const delta = data.message?.content;
+            if (typeof delta === "string" && delta.length > 0) {
+              fullText += delta;
+              receivedDelta = true;
+              onDelta(delta);
+            }
+          } catch {
+            // 忽略无法解析的流式数据块
+          }
+        });
+
+        if (receivedDelta) {
+          return fullText.trim();
+        }
+
+        // 流式无增量时退回非流式请求
+        const fallback = await this.requestOllama(messages, modelOverride);
+        if (fallback) {
+          onDelta(fallback);
+          return fallback;
+        }
+
+        lastError = "Ollama 返回了空内容";
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    throw new Error(lastError || "Ollama 请求失败");
+  }
+
+  private async requestModelApiStream(
+    messages: ChatMessage[],
+    onDelta: (delta: string) => void,
+    modelOverride?: string,
+  ): Promise<string> {
+    let lastError = "";
+
+    for (const endpoint of this.resolveModelApiEndpoints()) {
+      try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.modelApiKey}`,
+        };
+
+        if (this.modelApiSiteUrl) {
+          headers["HTTP-Referer"] = this.modelApiSiteUrl;
+        }
+
+        if (this.modelApiAppName) {
+          headers["X-Title"] = this.modelApiAppName;
+        }
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model: (modelOverride || "").trim() || this.modelApiModel,
+            messages,
+            temperature: 0.7,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `HTTP ${response.status} ${response.statusText}: ${errText}`;
+          continue;
+        }
+
+        let fullText = "";
+        let receivedDelta = false;
+
+        await this.readResponseLines(response, (line) => {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) return;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") return;
+
+          try {
+            const data = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+            };
+            const delta = data.choices?.[0]?.delta?.content;
+            if (typeof delta === "string" && delta.length > 0) {
+              fullText += delta;
+              receivedDelta = true;
+              onDelta(delta);
+            }
+          } catch {
+            // 忽略无法解析的流式数据块
+          }
+        });
+
+        if (receivedDelta) {
+          return fullText.trim();
+        }
+
+        // 流式无增量时退回非流式请求
+        const fallback = await this.requestModelApi(messages, modelOverride);
+        if (fallback) {
+          onDelta(fallback);
+          return fallback;
+        }
+
+        lastError = "通用 API 返回了空内容";
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    throw new Error(lastError || "通用 API 请求失败");
+  }
+
+  private async generateByOptionsStream(
+    messages: ChatMessage[],
+    options: ChatGenerationOptions,
+    onDelta: (delta: string) => void,
+  ): Promise<string> {
+    if (options.forceProvider === "deepseek") {
+      if (!this.isDeepSeekEnabled()) {
+        throw new Error("当前未配置 DeepSeek API Key，无法按所选模型执行。");
+      }
+
+      try {
+        return await this.requestDeepSeekStream(
+          messages,
+          onDelta,
+          options.deepseekModel,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`DeepSeek 调用失败：${msg}`);
+      }
+    }
+
+    if (options.forceProvider === "api") {
+      if (!this.isModelApiEnabled()) {
+        throw new Error("当前未配置通用 API Key，无法按所选模型执行。");
+      }
+
+      try {
+        return await this.requestModelApiStream(
+          messages,
+          onDelta,
+          options.apiModel,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`通用 API 调用失败：${msg}`);
+      }
+    }
+
+    if (options.forceProvider === "ollama") {
+      try {
+        return await this.requestOllamaStream(
+          messages,
+          onDelta,
+          options.ollamaModel,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Ollama 调用失败：${msg}`);
+      }
+    }
+
+    const errors: string[] = [];
+
+    if (this.isModelApiEnabled()) {
+      try {
+        return await this.requestModelApiStream(
+          messages,
+          onDelta,
+          options.apiModel,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`API: ${msg}`);
+      }
+    }
+
+    if (this.isDeepSeekEnabled()) {
+      try {
+        return await this.requestDeepSeekStream(
+          messages,
+          onDelta,
+          options.deepseekModel,
+        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`DeepSeek: ${msg}`);
+      }
+    }
+
+    try {
+      return await this.requestOllamaStream(
+        messages,
+        onDelta,
+        options.ollamaModel,
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      errors.push(`Ollama: ${msg}`);
+    }
+
+    if (!this.isModelApiEnabled() && !this.isDeepSeekEnabled()) {
+      throw new Error(
+        "未检测到 API Key，且 Ollama 调用失败。请在 .env 中设置 MODEL_API_KEY / DEEPSEEK_API_KEY 或配置 OLLAMA。",
+      );
+    }
+
+    throw new Error(
+      errors.length > 0
+        ? `自动选模失败：${errors.join("；")}`
+        : "自动选模失败：未获取到可用回复。",
+    );
+  }
+
+  async generateReplyStream(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
     options: ChatGenerationOptions = {},
+    onDelta: (delta: string) => void = () => {},
   ): Promise<string> {
+    const { question, mergedOptions, askedForOllama } = this.resolveInput(
+      userInput,
+      options,
+    );
+
+    if (!question) {
+      throw new Error(
+        askedForOllama
+          ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
+          : "请告诉我你想问什么。",
+      );
+    }
+
+    const messages = this.buildMessages(
+      this.openClawSystemPrompt,
+      question,
+      conversationHistory,
+    );
+
+    return this.generateByOptionsStream(messages, mergedOptions, onDelta);
+  }
+
+  private resolveInput(
+    userInput: string,
+    options: ChatGenerationOptions,
+  ): {
+    question: string;
+    mergedOptions: ChatGenerationOptions;
+    askedForOllama: boolean;
+  } {
     const rawQuestion = userInput.trim();
     const ollamaWithModelMatch = rawQuestion.match(
       /^ollama:([^\s]+)\s+([\s\S]+)$/i,
@@ -490,18 +885,6 @@ export class OpenClawClient {
         ? rawQuestion.replace(/^ollama[\s:]+/i, "").trim()
         : rawQuestion;
 
-    if (!question) {
-      return forceOllamaByPrefix || Boolean(ollamaWithModelMatch)
-        ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
-        : "请告诉我你想问什么。";
-    }
-
-    const messages = this.buildMessages(
-      this.openClawSystemPrompt,
-      question,
-      conversationHistory,
-    );
-
     const mergedOptions = forceOllamaByPrefix
       ? {
           ...options,
@@ -512,6 +895,35 @@ export class OpenClawClient {
             undefined,
         }
       : options;
+
+    return {
+      question,
+      mergedOptions,
+      askedForOllama: forceOllamaByPrefix || Boolean(ollamaWithModelMatch),
+    };
+  }
+
+  async generateReply(
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
+  ): Promise<string> {
+    const { question, mergedOptions, askedForOllama } = this.resolveInput(
+      userInput,
+      options,
+    );
+
+    if (!question) {
+      return askedForOllama
+        ? "请在 ollama 后面补充问题，例如: ollama 解释一下这段代码"
+        : "请告诉我你想问什么。";
+    }
+
+    const messages = this.buildMessages(
+      this.openClawSystemPrompt,
+      question,
+      conversationHistory,
+    );
 
     return this.generateByOptions(messages, mergedOptions);
   }

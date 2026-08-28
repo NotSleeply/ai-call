@@ -55,6 +55,20 @@ export class DaxiaAssistant {
     );
   }
 
+  async generateOpenClawReplyStream(
+    userInput: string,
+    conversationHistory: Array<{ role: string; content: string }> = [],
+    options: ChatGenerationOptions = {},
+    onDelta: (delta: string) => void = () => {},
+  ): Promise<string> {
+    return this.openClawClient.generateReplyStream(
+      userInput,
+      conversationHistory,
+      options,
+      onDelta,
+    );
+  }
+
   async readFile(filename?: string): Promise<void> {
     await this.fileSystemService.readFile(filename);
   }
