@@ -7,7 +7,7 @@
  */
 import { spawn } from "child_process";
 import { AiCallAssistant } from "./assistant.js";
-import { askConfirmation, isConfirmYes } from "./tty.js";
+import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
 import type { ChatGenerationOptions } from "../core/ai/openClawClient.js";
 import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
@@ -171,6 +171,8 @@ export async function runCommit(args: CliArgs): Promise<number> {
     buildDiffTask(diffResult.stat, diffResult.diff) +
     (extraRequirement ? `\n\n用户的额外要求：${extraRequirement}` : "");
 
+  const spinner = startSpinner("正在生成提交信息...");
+
   let message: string;
 
   try {
@@ -180,10 +182,14 @@ export async function runCommit(args: CliArgs): Promise<number> {
       [],
       buildOptions(args),
       (delta) => {
+        if (spinner?.isSpinning) {
+          spinner.stop();
+        }
         process.stdout.write(delta);
       },
     );
   } catch (error) {
+    spinner?.stop();
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;
@@ -192,7 +198,7 @@ export async function runCommit(args: CliArgs): Promise<number> {
   message = stripCodeFence(message).trim();
 
   if (!message) {
-    process.stderr.write("${CLI_NAME}: 生成提交信息失败，请检查模型配置\n");
+    process.stderr.write(`${CLI_NAME}: 生成提交信息失败，请检查模型配置\n`);
     return 1;
   }
 
@@ -204,12 +210,12 @@ export async function runCommit(args: CliArgs): Promise<number> {
     const answer = await askConfirmation("使用该信息提交? [y/N]: ");
 
     if (answer === "") {
-      process.stderr.write("${CLI_NAME}: 无法读取确认输入，未提交\n");
+      process.stderr.write(`${CLI_NAME}: 无法读取确认输入，未提交\n`);
       return 2;
     }
 
     if (!isConfirmYes(answer)) {
-      process.stderr.write("${CLI_NAME}: 已取消，未提交\n");
+      process.stderr.write(`${CLI_NAME}: 已取消，未提交\n`);
       return 0;
     }
   }
@@ -258,6 +264,7 @@ export async function runReview(args: CliArgs): Promise<number> {
   const task = buildDiffTask(stat.stdout, diff.stdout);
 
   const assistant = new AiCallAssistant();
+  const spinner = startSpinner("正在评审代码...");
 
   try {
     const answer = await assistant.runSkillTaskStream(
@@ -266,6 +273,9 @@ export async function runReview(args: CliArgs): Promise<number> {
       [],
       buildOptions(args),
       (delta) => {
+        if (spinner?.isSpinning) {
+          spinner.stop();
+        }
         process.stdout.write(delta);
       },
     );
@@ -276,6 +286,7 @@ export async function runReview(args: CliArgs): Promise<number> {
 
     return 0;
   } catch (error) {
+    spinner?.stop();
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;

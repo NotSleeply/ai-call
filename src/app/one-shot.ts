@@ -9,6 +9,7 @@
 import { AiCallAssistant } from "./assistant.js";
 import type { ChatGenerationOptions } from "../core/ai/openClawClient.js";
 import { CLI_NAME } from "./args.js";
+import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
 
 async function readStdinIfPiped(): Promise<string> {
@@ -118,6 +119,8 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     options.ollamaModel = args.model;
   }
 
+  const spinner = startSpinner("思考中...");
+
   try {
     let answer: string;
 
@@ -127,11 +130,15 @@ export async function runOneShot(args: CliArgs): Promise<number> {
         history,
         options,
         (delta) => {
+          if (spinner?.isSpinning) {
+            spinner.stop();
+          }
           process.stdout.write(delta);
         },
       );
     } else {
       answer = await assistant.generateOpenClawReply(question, history, options);
+      spinner?.stop();
       if (answer) {
         process.stdout.write(answer);
       }
@@ -144,6 +151,7 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     void persistExchange(question, answer);
     return 0;
   } catch (error) {
+    spinner?.stop();
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;

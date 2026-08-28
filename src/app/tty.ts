@@ -7,6 +7,28 @@
  */
 import { createInterface } from "readline";
 import { openSync, closeSync, readSync } from "fs";
+import yoctoSpinner from "yocto-spinner";
+
+export type SpinnerInstance = ReturnType<typeof yoctoSpinner>;
+
+function isStderrInteractive(): boolean {
+  return Boolean(
+    process.stderr.isTTY &&
+      process.env.TERM !== "dumb" &&
+      !("CI" in process.env),
+  );
+}
+
+/**
+ * 仅在 stderr 是交互终端时创建转圈提示；管道/重定向下返回 null，
+ * 保证 stderr 不被污染。
+ */
+export function startSpinner(text: string): SpinnerInstance | null {
+  if (!isStderrInteractive()) {
+    return null;
+  }
+  return yoctoSpinner({ text }).start();
+}
 
 /**
  * 从控制台直接读取一行（stdin 被管道占用时使用）。

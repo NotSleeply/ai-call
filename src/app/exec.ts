@@ -8,7 +8,7 @@
  */
 import { spawn } from "child_process";
 import { AiCallAssistant } from "./assistant.js";
-import { askConfirmation, isConfirmYes } from "./tty.js";
+import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
 import { buildQuestion, loadRecentHistory, readStdinIfPiped } from "./one-shot.js";
 import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
@@ -102,17 +102,20 @@ export async function runExec(args: CliArgs): Promise<number> {
     });
   }
 
-  process.stderr.write(`${CLI_NAME}: 正在生成命令...\n`);
+  const spinner = startSpinner("正在生成命令...");
 
   let raw: string;
 
   try {
     raw = await assistant.runSkillTask(EXEC_SYSTEM_PROMPT, question, history, options);
   } catch (error) {
+    spinner?.stop();
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;
   }
+
+  spinner?.stop();
 
   const { command, raw: rawText } = extractCommand(raw);
 
