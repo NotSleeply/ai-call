@@ -6,9 +6,9 @@
 
 export type ProviderName = "auto" | "deepseek" | "api" | "ollama";
 
-export type SubcommandName = "commit" | "review";
+export type SubcommandName = "commit" | "review" | "config";
 
-export const SUBCOMMANDS: SubcommandName[] = ["commit", "review"];
+export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "config"];
 
 export const CLI_NAME = "aic";
 
@@ -22,6 +22,7 @@ export interface CliArgs {
   continueSession: boolean;
   subcommand?: SubcommandName;
   yes: boolean;
+  show: boolean;
 }
 
 export class CliArgError extends Error {}
@@ -36,6 +37,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
   ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
+  ${CLI_NAME} config                     交互式配置模型（首次使用推荐）
   ${CLI_NAME} -i                         进入交互式 REPL（旧模式）
 
 选项:
@@ -44,6 +46,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   -x, --exec             生成命令并确认后执行
   -c, --continue         带上上一次对话的上下文继续提问
   -y, --yes              跳过确认，直接执行（用于 commit 子命令）
+      --show             显示当前模型配置（配合 config 子命令）
       --no-stream        禁用流式输出，等待完整回答后一次性输出
   -i, --interactive      进入交互式 REPL
   -h, --help             显示此帮助
@@ -61,6 +64,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
   ${CLI_NAME} commit && ${CLI_NAME} commit -y
   ${CLI_NAME} review src/app/cli.ts
+  ${CLI_NAME} config
 `;
 
 const PROVIDERS: ProviderName[] = ["auto", "deepseek", "api", "ollama"];
@@ -74,6 +78,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     exec: false,
     continueSession: false,
     yes: false,
+    show: false,
   };
 
   const promptParts: string[] = [];
@@ -137,6 +142,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "-y":
       case "--yes":
         result.yes = true;
+        break;
+      case "--show":
+        result.show = true;
         break;
       default:
         if (arg.startsWith("-") && arg !== "-") {

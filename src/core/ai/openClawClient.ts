@@ -472,7 +472,7 @@ export class OpenClawClient {
     }
 
     if (!this.isModelApiEnabled() && !this.isDeepSeekEnabled()) {
-      return "未检测到 API Key，且 Ollama 调用失败。请在 .env 中设置 MODEL_API_KEY / DEEPSEEK_API_KEY 或配置 OLLAMA。";
+      return "未检测到可用模型配置。运行 aic config 快速配置，或手动编辑 .env（MODEL_API_KEY / DEEPSEEK_API_KEY / OLLAMA_HOST）。";
     }
 
     return errors.length > 0
@@ -833,7 +833,7 @@ export class OpenClawClient {
 
     if (!this.isModelApiEnabled() && !this.isDeepSeekEnabled()) {
       throw new Error(
-        "未检测到 API Key，且 Ollama 调用失败。请在 .env 中设置 MODEL_API_KEY / DEEPSEEK_API_KEY 或配置 OLLAMA。",
+        "未检测到可用模型配置。运行 aic config 快速配置，或手动编辑 .env（MODEL_API_KEY / DEEPSEEK_API_KEY / OLLAMA_HOST）。",
       );
     }
 

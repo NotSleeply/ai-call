@@ -2,6 +2,12 @@
 
 本项目的所有显著变更记录于此，格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Added
+
+- `aic config` 交互式模型配置向导：选提供方、填 Key、保存后可立即测试连接；`aic config --show` 查看配置（密钥脱敏）
+
 ## [1.0.0] - 2026-08-28
 
 ### Added
