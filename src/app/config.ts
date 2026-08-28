@@ -214,6 +214,16 @@ function createPipedAsker(): Asker {
   };
 }
 
+let pipedAsker: Asker | null = null;
+
+function createAsker(): Asker {
+  if (process.stdin.isTTY === true) {
+    return createTtyAsker();
+  }
+  pipedAsker ??= createPipedAsker();
+  return pipedAsker;
+}
+
 async function testConnection(
   providerId: ProviderId,
   updates: Map<string, string>,
@@ -244,9 +254,38 @@ async function testConnection(
   }
 }
 
+export function hasProviderConfig(content: string): boolean {
+  const requiredByProvider: Record<ProviderId, string[]> = {
+    api: ["MODEL_API_KEY"],
+    deepseek: ["DEEPSEEK_API_KEY"],
+    ollama: ["OLLAMA_HOST"],
+  };
+
+  const env = new Map<string, string>();
+  for (const line of parseEnvLines(content)) {
+    if (line.key) {
+      env.set(line.key, line.raw.slice(line.raw.indexOf("=") + 1).trim());
+    }
+  }
+
+  return PROVIDERS.some((provider) =>
+    requiredByProvider[provider.id].some((key) => (env.get(key) ?? "") !== ""),
+  );
+}
+
+export function parseProviderChoice(
+  raw: string,
+  providerCount: number,
+): number | null {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > providerCount) {
+    return null;
+  }
+  return parsed - 1;
+}
+
 async function runWizard(): Promise<number> {
-  const asker =
-    process.stdin.isTTY === true ? createTtyAsker() : createPipedAsker();
+  const asker = createAsker();
 
   try {
     console.log("\n  AI Call 模型配置向导\n");
@@ -254,15 +293,17 @@ async function runWizard(): Promise<number> {
     PROVIDERS.forEach((provider, index) => {
       console.log(`  ${index + 1}) ${provider.name}   ${provider.desc}`);
     });
+    console.log(`  0) 退出`);
 
     const choiceRaw = await asker.ask(
-      `\n  选择模型提供方 [1-${PROVIDERS.length}] (默认 1): `,
+      `\n  选择模型提供方 [1-${PROVIDERS.length}] (回车退出): `,
     );
 
-    const parsed = Number.parseInt(choiceRaw || "1", 10);
-    const index = Number.isInteger(parsed)
-      ? Math.min(Math.max(parsed - 1, 0), PROVIDERS.length - 1)
-      : 0;
+    const index = parseProviderChoice(choiceRaw, PROVIDERS.length);
+    if (index === null) {
+      console.log("\n  已取消配置\n");
+      return 0;
+    }
 
     const provider = PROVIDERS[index];
 
@@ -315,10 +356,29 @@ async function runWizard(): Promise<number> {
   }
 }
 
-export function runConfig(args: CliArgs): Promise<number> | number {
+export async function runConfig(args: CliArgs): Promise<number> {
   if (args.show) {
     showConfig();
     return 0;
+  }
+
+  const configPath = resolveConfigPath();
+  if (existsSync(configPath)) {
+    const content = readFileSync(configPath, "utf8");
+    if (hasProviderConfig(content)) {
+      console.log("\n  当前已配置以下模型:\n");
+      showConfig();
+
+      const asker = createAsker();
+      try {
+        const answer = await asker.ask("\n  是否重新配置? [y/N]: ");
+        if (!/^(y|yes|是)$/i.test(answer)) {
+          return 0;
+        }
+      } finally {
+        asker.close();
+      }
+    }
   }
 
   return runWizard();
