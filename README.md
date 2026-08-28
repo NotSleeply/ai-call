@@ -1,5 +1,9 @@
 # AI Call — 终端 AI 助手（aic）
 
+[![npm version](https://img.shields.io/npm/v/%40notsleeply%2Fai-call-cli)](https://www.npmjs.com/package/@notsleeply/ai-call-cli)
+[![license](https://img.shields.io/npm/l/%40notsleeply%2Fai-call-cli)](LICENSE)
+[![node](https://img.shields.io/node/v/%40notsleeply%2Fai-call-cli)](https://nodejs.org)
+
 ## 定位与核心需求
 
 1. **单次命令调用（One-shot First）**
@@ -191,5 +195,15 @@ A: 把密钥配置放到用户级 `~/.ai-call/.env` 即可在任意目录使用�
 
 **Q: 数据库报原生绑定错误？**
 A: Node 版本变更后需 `pnpm rebuild better-sqlite3`；持久化失败不影响问答主流程。
+
+---
+
+## 参与与许可证
+
+- 贡献：见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- 安全漏洞报告：[SECURITY.md](SECURITY.md)
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
+- 许可证：[MIT](LICENSE)
 
 ---

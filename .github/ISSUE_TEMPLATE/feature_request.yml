@@ -1,0 +1,24 @@
+name: 功能建议
+description: 建议新的功能或改进
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: 功能描述
+      description: 你想要什么能力？解决什么场景？
+    validations:
+      required: true
+  - type: textarea
+    id: usage
+    attributes:
+      label: 期望用法
+      description: 如果已经想好命令形态，写出来（例如 `aic xxx`）
+      placeholder: |
+        $ echo data | aic xxx
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充说明
+      description: 为什么现有能力不够？相关替代方案？

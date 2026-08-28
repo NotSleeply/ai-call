@@ -1,18 +1,17 @@
-<!-- contributing-guide: v1 -->
-## Type of Change
+## 变更类型
 
-- [ ] **Feature skill** - adds a channel or integration (source code changes + SKILL.md)
-- [ ] **Utility skill** - adds a standalone tool (code files in `.claude/skills/<name>/`, no source changes)
-- [ ] **Operational/container skill** - adds a workflow or agent skill (SKILL.md only, no source changes)
-- [ ] **Fix** - bug fix or security fix to source code
-- [ ] **Simplification** - reduces or simplifies source code
-- [ ] **Documentation** - docs, README, or CONTRIBUTING changes only
+- [ ] 新功能
+- [ ] 修复
+- [ ] 重构
+- [ ] 文档
+- [ ] CI / 构建
 
-## Description
+## 描述
 
+<!-- 做了什么、为什么这么做 -->
 
-## For Skills
+## 验证
 
-- [ ] SKILL.md contains instructions, not inline code (code goes in separate files)
-- [ ] SKILL.md is under 500 lines
-- [ ] I tested this skill on a fresh clone
+- [ ] `pnpm build` 通过
+- [ ] 非 TTY 管道模式下 stderr 无多余输出
+- [ ] 相关 README / CHANGELOG 已更新

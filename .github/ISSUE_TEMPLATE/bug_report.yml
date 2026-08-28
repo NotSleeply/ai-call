@@ -1,0 +1,44 @@
+name: Bug 报告
+description: 报告 aic 的问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 发生了什么？尽量详细。
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 运行 `aic ...`
+        2. 看到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你期望发生什么？
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: aic --version 的输出
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: Windows 11 / macOS 15 / Ubuntu 24.04
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关输出
+      description: stderr 或相关命令输出（注意隐去密钥）
+      render: shell
