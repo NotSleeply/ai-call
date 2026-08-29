@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-08-30
+
 ### Fixed
 
 - API 请求改用与代理调度器相同的 undici 实现，避免不同 Node 运行时之间传递 dispatcher 导致兼容错误
