@@ -4,8 +4,6 @@
  * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
-export type ProviderName = "auto" | "deepseek" | "api" | "ollama";
-
 export type SubcommandName = "commit" | "review" | "config";
 
 export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "config"];
@@ -15,7 +13,6 @@ export const CLI_NAME = "aic";
 export interface CliArgs {
   mode: "one-shot" | "help" | "version";
   prompt: string;
-  provider: ProviderName;
   model?: string;
   stream: boolean;
   exec: boolean;
@@ -30,23 +27,22 @@ export class CliArgError extends Error {}
 export const USAGE_TEXT = `AI Call - 终端 AI 助手
 
 用法:
-  ${CLI_NAME} [选项] <问题>              提问并流式输出回答
+  ${CLI_NAME} [选项] <问题>              提问并输出回答
   echo <内容> | ${CLI_NAME} <问题>       管道内容作为上下文再提问
   echo <内容> | ${CLI_NAME}              直接处理管道内容
-  ${CLI_NAME} -x <任务>                  生成命令，确认后执行
+  ${CLI_NAME} -x <任务>                  开启命令执行和文件修改权限
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
   ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
   ${CLI_NAME} config                     交互式配置模型（首次使用推荐）
 
 选项:
-  -p, --provider <名>    指定模型提供方: auto | deepseek | api | ollama（默认 auto）
-  -m, --model <名>       指定模型名称，覆盖 .env 中的配置
-  -x, --exec             生成命令并确认后执行
+  -m, --model <名>       指定模型名称，临时覆盖配置
+  -x, --exec             开启命令执行和文件修改权限（逐次确认）
   -c, --continue         带上上一次对话的上下文继续提问
   -y, --yes              跳过确认，直接执行（用于 commit 子命令）
       --show             显示当前模型配置（配合 config 子命令）
-      --no-stream        禁用流式输出，等待完整回答后一次性输出
+      --no-stream        等待完整回答后一次性输出（Agent 工具循环本身使用完整响应）
   -h, --help             显示此帮助
   -v, --version          显示版本号
 
@@ -65,13 +61,10 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} config
 `;
 
-const PROVIDERS: ProviderName[] = ["auto", "deepseek", "api", "ollama"];
-
 export function parseCliArgs(argv: string[]): CliArgs {
   const result: CliArgs = {
     mode: "one-shot",
     prompt: "",
-    provider: "auto",
     stream: true,
     exec: false,
     continueSession: false,
@@ -102,17 +95,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--version":
         result.mode = "version";
         return result;
-      case "-p":
-      case "--provider": {
-        const value = argv[++i];
-        if (!value || !PROVIDERS.includes(value as ProviderName)) {
-          throw new CliArgError(
-            `无效的 provider: ${value || "（空）"}，可选值: auto | deepseek | api | ollama`,
-          );
-        }
-        result.provider = value as ProviderName;
-        break;
-      }
       case "-m":
       case "--model": {
         const value = argv[++i];

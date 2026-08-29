@@ -127,17 +127,7 @@ function stripCodeFence(text: string): string {
 }
 
 function buildOptions(args: CliArgs): ChatGenerationOptions {
-  const options: ChatGenerationOptions = {
-    forceProvider: args.provider === "auto" ? undefined : args.provider,
-  };
-
-  if (args.model) {
-    options.deepseekModel = args.model;
-    options.apiModel = args.model;
-    options.ollamaModel = args.model;
-  }
-
-  return options;
+  return { modelOverride: args.model };
 }
 
 export async function runCommit(args: CliArgs): Promise<number> {

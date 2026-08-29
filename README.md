@@ -8,17 +8,17 @@
 
 1. **单次命令调用（One-shot First）**
    - 不进入任何交互界面，直接通过命令参数触发。
-   - 例如：`aic "tar 解压到指定目录的参数是什么"` 或 `aic -f index.ts "帮我把这个函数转成 async"`。
-   - 结果直接流式打在当前终端，不产生多余的边框和欢迎语。
+   - 例如：`aic "tar 解压到指定目录的参数是什么"` 或 `aic "检查 index.ts 中的入口函数"`。
+   - 结果直接输出到当前终端，不产生多余的边框和欢迎语。
 
 2. **原生支持 Unix 管道（Pipe-friendly）**
    - 支持从标准输入（stdin）读取内容。
    - 例如：`git diff | aic "生成一行符合规范的 commit message"`，或者 `cat error.log | aic "提取出最核心的报错原因"`。
    - 输出纯净文本，方便进一步重定向到文件或下一个命令。
 
-3. **Shell 命令生成与安全确认执行**
-   - 终端里最高频的痛点是记不住复杂命令（如 find、ffmpeg、docker、git 等）。
-   - 提供执行标志（如 `aic -x "找出占用 8080 端口的进程并杀掉"`），AI 生成精准命令，按下回车直接运行，按取消即放弃。
+3. **轻量 Agent 与安全操作**
+   - 可以在当前项目内查找文件、读取文本、按正则搜索；开启 `-x` 后还可以确认执行简单命令和应用文件补丁。
+   - Agent 每次只调用一个工具，最多调用 3 次；命令执行和文件修改都需要逐次确认。
 
 4. **无缝上下文延续（可选 Context）**
    - 默认无状态，保证极速响应。
@@ -27,12 +27,12 @@
 
 **特性**：
 
-- ⚡ 单次调用为主，`aic <问题>` 即问即走，流式输出
+- ⚡ 单次调用为主，`aic <问题>` 即问即走，按需调用本地只读工具
 - 🔗 管道友好：stdin 内容与提问合并，回答纯净可继续管道
-- 🛠️ `-x` 命令生成 + 确认执行，支持交互确认与 `-y` 跳过
+- 🛠️ `-x` 开启命令执行与文件修改，所有动作逐次确认
 - 💬 `-c` 上下文延续，自动带上一次对话（SQLite 持久化）
 - 🐙 Git 快捷子命令：`aic commit`（生成提交信息并提交）、`aic review`（代码评审）
-- 🧠 多模型自动选路：通用 API → DeepSeek → Ollama，可用 `-p`/`-m` 强制指定
+- 🧠 单一 OpenAI-compatible API 配置，DeepSeek、OpenAI、OpenRouter 等统一接入
 - ⚙️ `aic config` 交互式配置向导，首次使用零门槛
 
 ---
@@ -61,9 +61,9 @@ npm link
 aic config
 ```
 
-向导会引导你选择模型提供方（通用 API / DeepSeek / Ollama）、填写 Key 与模型名，保存后可选立即测试连接。`aic config --show` 可随时查看当前配置（密钥脱敏显示）。
+向导会引导你填写 API Key、API 地址和模型名，保存后可选立即测试连接。`aic config --show` 可随时查看当前配置（密钥脱敏显示）。
 
-也可以手动配置，模型配置按以下顺序读取（前面的优先）：
+只支持 OpenAI-compatible Chat Completions API。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
 
 1. 当前目录的 `.env`
 2. 用户级 `~/.ai-call/.env`（任意目录可用 `aic`）
@@ -71,22 +71,11 @@ aic config
 可复制 `.env.example` 起步：
 
 ```bash
-# 通用 API（优先级最高，兼容 OpenRouter/OpenAI 等 OpenAI 格式服务）
-MODEL_API_KEY=你的Key
-MODEL_API_MODEL=gpt-5-mini
-MODEL_API_BASE_URL=https://openrouter.ai/api/v1
-
-# DeepSeek
-DEEPSEEK_API_KEY=你的DeepSeekKey
-DEEPSEEK_MODEL=deepseek-chat
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-
-# 本地 Ollama
-OLLAMA_HOST=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen3:latest
+# OpenAI-compatible API（OpenAI、DeepSeek、OpenRouter 等）
+AIC_API_KEY=你的Key
+AIC_BASE_URL=https://api.openai.com/v1
+AIC_MODEL=gpt-5-mini
 ```
-
-自动模式下模型选路顺序：`MODEL_API_*` → `DEEPSEEK_*` → 本地 `OLLAMA_*`。未配置任何外部 Key 时可仅用本地 Ollama。
 
 ---
 
@@ -98,7 +87,7 @@ OLLAMA_MODEL=qwen3:latest
 aic "tar 解压 tar.gz 的命令是什么"
 ```
 
-回答流式输出到 stdout，问完即退，无欢迎语、无边框。
+回答输出到 stdout，问完即退，无欢迎语、无边框。
 
 ### 管道输入
 
@@ -110,13 +99,13 @@ echo "hello" | aic          # 直接处理管道内容
 
 管道内容会作为上下文与提问合并；回答只进 stdout，可直接重定向或继续管道。
 
-### 命令生成与确认执行（-x）
+### Agent 与确认执行（-x）
 
 ```bash
-aic -x "找出占用 8080 端口的进程并杀掉"
+aic -x "检查项目测试是否通过；如果失败，修复相关文件"
 ```
 
-AI 生成命令后展示并询问 `执行? [y/N]`，输入 y 执行，其他取消。Windows 下自动生成 cmd 语法（`dir`/`tasklist`），Linux/macOS 生成 bash。
+不带 `-x` 时，Agent 只能查找文件、读取文本和按正则搜索；带上 `-x` 后才允许调用命令执行和文件补丁工具。每次动作都会展示摘要并询问确认，输入 y 才会执行，其他输入取消。命令通过参数数组执行，不支持 shell、管道、重定向或命令连接。
 
 ### 上下文延续（-c）
 
@@ -143,12 +132,11 @@ aic review src/app      # 只评审指定路径
 
 | 参数 | 说明 |
 | --- | --- |
-| `-p, --provider <名>` | 模型提供方：`auto` \| `deepseek` \| `api` \| `ollama`（默认 auto） |
-| `-m, --model <名>` | 指定模型名，覆盖 `.env` 配置 |
-| `-x, --exec` | 生成命令并确认后执行 |
+| `-m, --model <名>` | 临时覆盖配置中的模型名 |
+| `-x, --exec` | 开启命令执行与文件修改权限，逐次确认 |
 | `-c, --continue` | 带上一次对话的上下文 |
 | `-y, --yes` | 跳过确认直接执行（commit 子命令） |
-| `--no-stream` | 禁用流式输出，一次返回完整回答 |
+| `--no-stream` | 使用完整响应输出（Agent 工具循环默认使用完整响应） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
 ### 输出约定与退出码
@@ -167,13 +155,15 @@ ai-call/
 │   └── app/
 │       ├── args.ts                 # 参数解析与帮助文本
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
-│       ├── exec.ts                 # -x 命令生成与确认执行
 │       ├── git-commands.ts         # commit / review 子命令
 │       ├── config.ts               # aic config 配置向导
 │       ├── tty.ts                  # 终端确认输入与转圈提示
 │       └── assistant.ts            # 助手门面
 ├── src/core/
-│   ├── ai/openClawClient.ts        # 模型客户端（多 provider、流式 SSE/NDJSON）
+│   ├── ai/openClawClient.ts        # OpenAI-compatible 客户端与 tool_calls
+│   ├── agent/
+│       ├── runtime.ts              # 统一 Agent 循环与工具权限
+│       └── tools.ts                # 文件查找、读取、正则搜索、命令、补丁工具
 │   └── database/index.ts           # SQLite 数据库
 ├── .github/workflows/release.yml   # 打 tag 自动发 npm 包与 GitHub Release
 ├── data/                           # 数据文件（SQLite 数据库等）
@@ -192,16 +182,16 @@ A: 两个痛点。一是很多 AI 编程助手把 TUI/REPL 做得很「重」：
 
 **Q: 已经有 Claude Code / Copilot 了，为什么还要 AI Call？**
 
-A: 定位不同，不是替代关系。Claude Code 是项目级 Agent，负责多文件改造、测试、调试这种长任务；AI Call 是终端级「外脑」，解决高频小问题：记不住命令、快速解释报错、生成 commit message、代码评审。AI Call 刻意不做工具调用和文件改写，把交互成本压到一行命令。两者配合使用：Agent 做项目，AI Call 做终端。
+A: 定位不同，不是替代关系。Claude Code 是项目级 Agent，负责多文件改造、测试、调试这种长任务；AI Call 是终端级「外脑」，解决高频小问题：记不住命令、快速解释报错、生成 commit message、代码评审。AI Call 只保留轻量、受控的本地工具，并把调用次数和写入权限限制在小范围内。两者配合使用：复杂任务交给项目级 Agent，日常小任务交给 AI Call。
 
 **Q: AI Call 的优势是什么？**
 
 A:
 
-- **轻**：无 TUI、无横幅，`aic "..."` 一行即答，首 token 秒级返回，等待期有转圈提示
+- **轻**：无 TUI、无横幅，`aic "..."` 一行即答，等待期有转圈提示
 - **纯**：回答只进 stdout，管道可直接接续（`git diff | aic "写 commit message"`），脚本友好
-- **安全**：`-x` 生成的命令必须人工确认才执行；`commit`/`review` 只做明确的事
-- **自由**：模型不锁定厂商，通用 API / DeepSeek / Ollama 自动选路，本地模型也能用
+- **安全**：`-x` 的命令和文件修改必须人工确认；Agent 有工具次数和项目路径边界
+- **自由**：模型不锁定厂商，所有 OpenAI-compatible 服务共用一套配置
 - **低依赖**：只装 Node，配置一个 `.env` 就能跑
 
 **Q: 和 `claude -p`、`gh copilot` 这类命令有什么不同？**
@@ -212,10 +202,7 @@ A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/st
 A: 确认已执行 `pnpm install`、`pnpm run build`、`npm link`。
 
 **Q: 提示 API 401 / 找不到 Key？**
-A: 检查 `.env` 或 `~/.ai-call/.env` 是否配置了 `MODEL_API_KEY` 等；也可用 `-p` 强制指定已配置的提供方。
-
-**Q: 本地 Ollama 无响应？**
-A: 确认 Ollama 服务已启动且 `OLLAMA_HOST` 配置正确，可先 `ollama pull qwen3`。
+A: 检查 `.env` 或 `~/.ai-call/.env` 是否配置了 `AIC_API_KEY`、`AIC_BASE_URL` 和 `AIC_MODEL`，也可以运行 `aic config --show` 查看脱敏后的配置。
 
 **Q: `aic` 在非项目目录用不了模型？**
 A: 把密钥配置放到用户级 `~/.ai-call/.env` 即可在任意目录使用。

@@ -1,11 +1,8 @@
 /**
- * AI Call - 交互式模型配置向导（aic config）
+ * AI Call - 单一 OpenAI-compatible API 配置向导（aic config）
  *
- * 职责：
- * - 引导用户选择模型提供方并填写 Key/地址/模型
- * - 写入用户级配置 ~/.ai-call/.env（保留已有键与注释）
- * - 支持立即测试连接；--show 查看当前配置（密钥脱敏）
- * - 非 TTY 环境支持管道逐行输入答案（便于脚本化）
+ * 配置只包含 API Key、API 地址和模型名。DeepSeek、OpenRouter 等服务只要
+ * 提供 OpenAI-compatible 接口，就使用同一组配置，不再按厂商分支。
  */
 import { createInterface } from "readline";
 import { homedir } from "os";
@@ -16,101 +13,58 @@ import { CLI_NAME } from "./args.js";
 import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
 
-type ProviderId = "api" | "deepseek" | "ollama";
+export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
+export const DEFAULT_MODEL = "gpt-5-mini";
 
-export const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash";
-
-interface FieldSpec {
-  key: string;
-  label: string;
-  secret?: boolean;
-  defaultFor(env: Map<string, string>): string;
-}
-
-interface ProviderSpec {
-  id: ProviderId;
-  name: string;
-  desc: string;
-  fields: FieldSpec[];
-}
-
-export const PROVIDERS: ProviderSpec[] = [
-  {
-    id: "api",
-    name: "通用 API（OpenAI 兼容）",
-    desc: "OpenRouter / OpenAI / Kimi 等",
-    fields: [
-      {
-        key: "MODEL_API_KEY",
-        label: "API Key",
-        secret: true,
-        defaultFor: () => "",
-      },
-      {
-        key: "MODEL_API_BASE_URL",
-        label: "API 地址",
-        defaultFor: (env) =>
-          env.get("MODEL_API_BASE_URL") ?? "https://openrouter.ai/api/v1",
-      },
-      {
-        key: "MODEL_API_MODEL",
-        label: "模型名",
-        defaultFor: (env) => env.get("MODEL_API_MODEL") ?? "gpt-5-mini",
-      },
-    ],
-  },
-  {
-    id: "deepseek",
-    name: "DeepSeek",
-    desc: "api.deepseek.com",
-    fields: [
-      {
-        key: "DEEPSEEK_API_KEY",
-        label: "API Key",
-        secret: true,
-        defaultFor: () => "",
-      },
-      {
-        key: "DEEPSEEK_MODEL",
-        label: "模型名",
-        defaultFor: (env) =>
-          env.get("DEEPSEEK_MODEL") ?? DEFAULT_DEEPSEEK_MODEL,
-      },
-    ],
-  },
-  {
-    id: "ollama",
-    name: "Ollama（本地）",
-    desc: "http://127.0.0.1:11434",
-    fields: [
-      {
-        key: "OLLAMA_HOST",
-        label: "服务地址",
-        defaultFor: (env) =>
-          env.get("OLLAMA_HOST") ?? "http://127.0.0.1:11434",
-      },
-      {
-        key: "OLLAMA_MODEL",
-        label: "模型名",
-        defaultFor: (env) => env.get("OLLAMA_MODEL") ?? "qwen3:latest",
-      },
-    ],
-  },
-];
+export const CONFIG_KEYS = [
+  "AIC_API_KEY",
+  "AIC_BASE_URL",
+  "AIC_MODEL",
+] as const;
 
 interface EnvLine {
   raw: string;
   key: string | null;
 }
 
+interface ConfigField {
+  key: (typeof CONFIG_KEYS)[number];
+  label: string;
+  secret?: boolean;
+  defaultValue: string;
+}
+
+const CONFIG_FIELDS: ConfigField[] = [
+  { key: "AIC_API_KEY", label: "API Key", secret: true, defaultValue: "" },
+  {
+    key: "AIC_BASE_URL",
+    label: "API 地址",
+    defaultValue: DEFAULT_API_BASE_URL,
+  },
+  { key: "AIC_MODEL", label: "模型名", defaultValue: DEFAULT_MODEL },
+];
+
 function parseEnvLines(content: string): EnvLine[] {
-  if (!content.trim()) {
+  if (!content) {
     return [];
   }
+
   return content.split(/\r?\n/).map((raw) => {
     const match = raw.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
     return { raw, key: match ? match[1] : null };
   });
+}
+
+function envMap(lines: EnvLine[]): Map<string, string> {
+  const values = new Map<string, string>();
+
+  for (const line of lines) {
+    if (line.key) {
+      values.set(line.key, line.raw.slice(line.raw.indexOf("=") + 1).trim());
+    }
+  }
+
+  return values;
 }
 
 function renderEnvLines(
@@ -122,7 +76,7 @@ function renderEnvLines(
 
   for (const line of lines) {
     if (line.key && updates.has(line.key)) {
-      output.push(`${line.key}=${updates.get(line.key)}`);
+      output.push(`${line.key}=${updates.get(line.key) ?? ""}`);
       handled.add(line.key);
     } else {
       output.push(line.raw);
@@ -138,14 +92,19 @@ function renderEnvLines(
   return output.join("\n").trimEnd() + "\n";
 }
 
-function resolveConfigPath(): string {
+export function resolveConfigPath(): string {
   return join(homedir(), ".ai-call", ".env");
 }
 
 function maskSecret(value: string): string {
+  if (!value) {
+    return "（未设置）";
+  }
+
   if (value.length <= 8) {
     return "****";
   }
+
   return `${value.slice(0, 4)}****${value.slice(-4)}`;
 }
 
@@ -159,15 +118,12 @@ function showConfig(): void {
     return;
   }
 
+  const values = envMap(parseEnvLines(readFileSync(configPath, "utf8")));
   console.log(`配置文件: ${configPath}`);
 
-  for (const line of parseEnvLines(readFileSync(configPath, "utf8"))) {
-    if (!line.key) {
-      continue;
-    }
-    const value = line.raw.slice(line.raw.indexOf("=") + 1).trim();
-    const isSecret = /KEY|TOKEN|SECRET|PASSWORD/i.test(line.key);
-    console.log(`${line.key}=${isSecret ? maskSecret(value) : value}`);
+  for (const field of CONFIG_FIELDS) {
+    const value = values.get(field.key) ?? "";
+    console.log(`${field.key}=${field.secret ? maskSecret(value) : value}`);
   }
 }
 
@@ -194,12 +150,11 @@ function createTtyAsker(): Asker {
 function createPipedAsker(): Asker {
   const chunks: Buffer[] = [];
   const pending: string[] = [];
-  let ready: Promise<void> | null = null;
-
-  ready = (async () => {
+  const ready = (async () => {
     for await (const chunk of process.stdin) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
+
     for (const line of Buffer.concat(chunks).toString("utf8").split(/\r?\n/)) {
       pending.push(line);
     }
@@ -220,14 +175,22 @@ function createAsker(): Asker {
   if (process.stdin.isTTY === true) {
     return createTtyAsker();
   }
+
   pipedAsker ??= createPipedAsker();
   return pipedAsker;
 }
 
-async function testConnection(
-  providerId: ProviderId,
-  updates: Map<string, string>,
-): Promise<void> {
+function validateBaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") &&
+      url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function testConnection(updates: Map<string, string>): Promise<void> {
   for (const [key, value] of updates) {
     process.env[key] = value;
   }
@@ -236,10 +199,7 @@ async function testConnection(
   const spinner = startSpinner("正在测试连接...");
 
   try {
-    const reply = await client.generateReply("只回复两个字:成功", [], {
-      forceProvider: providerId,
-    });
-
+    const reply = await client.generateReply("只回复：成功");
     spinner?.stop();
 
     if (reply.includes("成功")) {
@@ -254,81 +214,29 @@ async function testConnection(
   }
 }
 
-export function hasProviderConfig(content: string): boolean {
-  const requiredByProvider: Record<ProviderId, string[]> = {
-    api: ["MODEL_API_KEY"],
-    deepseek: ["DEEPSEEK_API_KEY"],
-    ollama: ["OLLAMA_HOST"],
-  };
-
-  const env = new Map<string, string>();
-  for (const line of parseEnvLines(content)) {
-    if (line.key) {
-      env.set(line.key, line.raw.slice(line.raw.indexOf("=") + 1).trim());
-    }
-  }
-
-  return PROVIDERS.some((provider) =>
-    requiredByProvider[provider.id].some((key) => (env.get(key) ?? "") !== ""),
-  );
-}
-
-export function parseProviderChoice(
-  raw: string,
-  providerCount: number,
-): number | null {
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > providerCount) {
-    return null;
-  }
-  return parsed - 1;
+export function hasConfig(content: string): boolean {
+  const values = envMap(parseEnvLines(content));
+  return Boolean(values.get("AIC_API_KEY")?.trim());
 }
 
 async function runWizard(): Promise<number> {
   const asker = createAsker();
 
   try {
-    console.log("\n  AI Call 模型配置向导\n");
-
-    PROVIDERS.forEach((provider, index) => {
-      console.log(`  ${index + 1}) ${provider.name}   ${provider.desc}`);
-    });
-    console.log(`  0) 退出`);
-
-    const choiceRaw = await asker.ask(
-      `\n  选择模型提供方 [1-${PROVIDERS.length}] (回车退出): `,
-    );
-
-    const index = parseProviderChoice(choiceRaw, PROVIDERS.length);
-    if (index === null) {
-      console.log("\n  已取消配置\n");
-      return 0;
-    }
-
-    const provider = PROVIDERS[index];
+    console.log("\n  AI Call API 配置向导\n");
 
     const configPath = resolveConfigPath();
     const existing = existsSync(configPath)
       ? readFileSync(configPath, "utf8")
       : "";
-
-    const lines = parseEnvLines(existing);
-    const env = new Map<string, string>();
-
-    for (const line of lines) {
-      if (line.key) {
-        env.set(line.key, line.raw.slice(line.raw.indexOf("=") + 1).trim());
-      }
-    }
-
+    const existingValues = envMap(parseEnvLines(existing));
     const updates = new Map<string, string>();
 
-    for (const field of provider.fields) {
-      const defaultValue = field.defaultFor(env);
+    for (const field of CONFIG_FIELDS) {
+      const defaultValue = existingValues.get(field.key) || field.defaultValue;
       const question = field.secret
         ? `  ${field.label}（必填）: `
         : `  ${field.label} [${defaultValue}]: `;
-
       const answer = await asker.ask(question);
 
       if (field.secret && !answer) {
@@ -336,18 +244,24 @@ async function runWizard(): Promise<number> {
         return 1;
       }
 
-      updates.set(field.key, answer || defaultValue);
+      const value = answer || defaultValue;
+
+      if (field.key === "AIC_BASE_URL" && !validateBaseUrl(value)) {
+        console.log(`  ❌ API 地址无效，必须是 http:// 或 https:// 地址\n`);
+        return 1;
+      }
+
+      updates.set(field.key, value);
     }
 
     mkdirSync(dirname(configPath), { recursive: true });
-    writeFileSync(configPath, renderEnvLines(lines, updates), "utf8");
+    writeFileSync(configPath, renderEnvLines(parseEnvLines(existing), updates), "utf8");
 
     console.log(`\n  ✅ 配置已保存到 ${configPath}\n`);
 
     const testAnswer = await asker.ask("  是否立即测试连接? [y/N]: ");
-
     if (/^(y|yes|是)$/i.test(testAnswer)) {
-      await testConnection(provider.id, updates);
+      await testConnection(updates);
     }
 
     return 0;
@@ -363,21 +277,18 @@ export async function runConfig(args: CliArgs): Promise<number> {
   }
 
   const configPath = resolveConfigPath();
-  if (existsSync(configPath)) {
-    const content = readFileSync(configPath, "utf8");
-    if (hasProviderConfig(content)) {
-      console.log("\n  当前已配置以下模型:\n");
-      showConfig();
+  if (existsSync(configPath) && hasConfig(readFileSync(configPath, "utf8"))) {
+    console.log("\n  当前已配置模型:\n");
+    showConfig();
 
-      const asker = createAsker();
-      try {
-        const answer = await asker.ask("\n  是否重新配置? [y/N]: ");
-        if (!/^(y|yes|是)$/i.test(answer)) {
-          return 0;
-        }
-      } finally {
-        asker.close();
+    const asker = createAsker();
+    try {
+      const answer = await asker.ask("\n  是否重新配置? [y/N]: ");
+      if (!/^(y|yes|是)$/i.test(answer)) {
+        return 0;
       }
+    } finally {
+      asker.close();
     }
   }
 

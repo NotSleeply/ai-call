@@ -70,7 +70,7 @@ export async function askConfirmation(prompt: string): Promise<string> {
   if (process.stdin.isTTY === true) {
     const rl = createInterface({
       input: process.stdin,
-      output: process.stdout,
+      output: process.stderr,
     });
 
     try {
@@ -84,7 +84,7 @@ export async function askConfirmation(prompt: string): Promise<string> {
     }
   }
 
-  process.stdout.write(prompt);
+  process.stderr.write(prompt);
   return readTtyLineSync();
 }
 

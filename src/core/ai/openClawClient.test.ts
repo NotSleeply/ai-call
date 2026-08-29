@@ -1,48 +1,47 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 
-const previousApiKey = process.env.MODEL_API_KEY;
-const previousBaseUrl = process.env.MODEL_API_BASE_URL;
-process.env.MODEL_API_KEY = "test-key";
-process.env.MODEL_API_BASE_URL = "http://mock.invalid/v1";
+const previousApiKey = process.env.AIC_API_KEY;
+const previousBaseUrl = process.env.AIC_BASE_URL;
+const previousModel = process.env.AIC_MODEL;
+process.env.AIC_API_KEY = "test-key";
+process.env.AIC_BASE_URL = "http://mock.invalid/v1";
+process.env.AIC_MODEL = "test-model";
 
 const { OpenClawClient } = await import("./openClawClient.js");
 
 after(() => {
-  if (previousApiKey === undefined) {
-    delete process.env.MODEL_API_KEY;
-  } else {
-    process.env.MODEL_API_KEY = previousApiKey;
-  }
-
-  if (previousBaseUrl === undefined) {
-    delete process.env.MODEL_API_BASE_URL;
-  } else {
-    process.env.MODEL_API_BASE_URL = previousBaseUrl;
-  }
+  if (previousApiKey === undefined) delete process.env.AIC_API_KEY;
+  else process.env.AIC_API_KEY = previousApiKey;
+  if (previousBaseUrl === undefined) delete process.env.AIC_BASE_URL;
+  else process.env.AIC_BASE_URL = previousBaseUrl;
+  if (previousModel === undefined) delete process.env.AIC_MODEL;
+  else process.env.AIC_MODEL = previousModel;
 });
 
-test("非流式 provider 失败会抛出错误", async () => {
+test("非流式 API 失败会抛出错误", async () => {
   const previousFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    new Response("unauthorized", {
+  globalThis.fetch = async (input) => {
+    assert.equal(String(input), "http://mock.invalid/v1/chat/completions");
+    return new Response("unauthorized", {
       status: 401,
       statusText: "Unauthorized",
     });
+  };
 
   try {
     const client = new OpenClawClient();
 
     await assert.rejects(
-      client.generateReply("hello", [], { forceProvider: "api" }),
-      /通用 API 调用失败：HTTP 401 Unauthorized: unauthorized/,
+      client.generateReply("hello", [], { modelOverride: "override-model" }),
+      /API 请求失败: HTTP 401 Unauthorized: unauthorized/,
     );
   } finally {
     globalThis.fetch = previousFetch;
   }
 });
 
-test("流式响应已输出内容后不会重试 endpoint", async () => {
+test("流式响应已输出内容后不会重试请求", async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;
   let pullCount = 0;
@@ -79,10 +78,10 @@ test("流式响应已输出内容后不会重试 endpoint", async () => {
       client.generateReplyStream(
         "hello",
         [],
-        { forceProvider: "api" },
+        {},
         (delta) => deltas.push(delta),
       ),
-      /通用 API 调用失败：stream interrupted/,
+      /stream interrupted/,
     );
 
     assert.deepEqual(deltas, ["part"]);

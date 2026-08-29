@@ -3,14 +3,16 @@
  *
  * 职责：
  * - 检测 stdin 管道，与命令行 prompt 合并
- * - 流式输出回答到 stdout，错误与提示到 stderr
+ * - 通过统一 Agent Runtime 输出回答到 stdout，错误与提示到 stderr
  * - 尽力持久化对话（数据库不可用时不影响主流程）
  */
-import { AiCallAssistant } from "./assistant.js";
-import type { ChatGenerationOptions } from "../core/ai/openClawClient.js";
 import { CLI_NAME } from "./args.js";
-import { startSpinner } from "./tty.js";
+import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
+import {
+  AgentRuntime,
+  type AgentActionRequest,
+} from "../core/agent/runtime.js";
 
 async function readStdinIfPiped(): Promise<string> {
   if (process.stdin.isTTY) {
@@ -89,6 +91,40 @@ export async function buildQuestion(
 
 export { readStdinIfPiped };
 
+class ConfirmationUnavailableError extends Error {}
+
+function actionConfirmationText(request: AgentActionRequest): string {
+  if (request.name === "run_command") {
+    const input = request.arguments;
+    if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+      const command = (input as Record<string, unknown>).command;
+      const args = (input as Record<string, unknown>).args;
+      if (typeof command === "string" && Array.isArray(args)) {
+        return `准备执行命令: ${JSON.stringify([command, ...args])}`;
+      }
+      if (typeof command === "string") {
+        return `准备执行命令: ${command}`;
+      }
+    }
+    return "准备执行一个本地命令";
+  }
+
+  if (request.name === "edit_file") {
+    const input = request.arguments;
+    if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+      const path = (input as Record<string, unknown>).path;
+      const patch = (input as Record<string, unknown>).patch;
+      if (typeof path === "string") {
+        const size = typeof patch === "string" ? patch.length : 0;
+        return `准备修改文件 ${path}（补丁 ${size} 字符）`;
+      }
+    }
+    return "准备修改一个项目文件";
+  }
+
+  return `准备调用工具 ${request.name}`;
+}
+
 export async function runOneShot(args: CliArgs): Promise<number> {
   const stdinText = await readStdinIfPiped();
   const question = (await buildQuestion(args.prompt, stdinText)).trim();
@@ -107,41 +143,30 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     process.stderr.write(`${CLI_NAME}: 未找到可延续的历史对话，本次以全新上下文提问\n`);
   }
 
-  const assistant = new AiCallAssistant();
-
-  const options: ChatGenerationOptions = {
-    forceProvider: args.provider === "auto" ? undefined : args.provider,
-  };
-
-  if (args.model) {
-    options.deepseekModel = args.model;
-    options.apiModel = args.model;
-    options.ollamaModel = args.model;
-  }
-
   const spinner = startSpinner("思考中...");
 
   try {
-    let answer: string;
+    const runtime = new AgentRuntime();
+    const answer = await runtime.run(question, history, {
+      modelOverride: args.model,
+      allowActions: args.exec,
+      confirmAction: async (request) => {
+        spinner?.stop();
+        const answer = await askConfirmation(
+          `${actionConfirmationText(request)}\n确认执行? [y/N]: `,
+        );
 
-    if (args.stream) {
-      answer = await assistant.generateOpenClawReplyStream(
-        question,
-        history,
-        options,
-        (delta) => {
-          if (spinner?.isSpinning) {
-            spinner.stop();
-          }
-          process.stdout.write(delta);
-        },
-      );
-    } else {
-      answer = await assistant.generateOpenClawReply(question, history, options);
-      spinner?.stop();
-      if (answer) {
-        process.stdout.write(answer);
-      }
+        if (!answer) {
+          throw new ConfirmationUnavailableError("无法读取确认输入");
+        }
+
+        return isConfirmYes(answer);
+      },
+    });
+
+    spinner?.stop();
+    if (answer) {
+      process.stdout.write(answer);
     }
 
     if (answer && !answer.endsWith("\n")) {
@@ -152,6 +177,10 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     return 0;
   } catch (error) {
     spinner?.stop();
+    if (error instanceof ConfirmationUnavailableError) {
+      process.stderr.write(`${CLI_NAME}: 无法读取确认输入，已取消操作\n`);
+      return 2;
+    }
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;

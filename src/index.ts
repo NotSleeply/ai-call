@@ -2,11 +2,10 @@
 /**
  * AI Call - 应用入口
  *
- * 职责：解析命令行参数，分发到一次性问答、命令执行或子命令
+ * 职责：解析命令行参数，分发到一次性 Agent 调用或子命令
  */
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
-import { runExec } from "./app/exec.js";
 import { runCommit, runReview } from "./app/git-commands.js";
 import { runConfig } from "./app/config.js";
 import { VERSION } from "./version.js";
@@ -40,8 +39,6 @@ async function main(): Promise<void> {
         process.exitCode = await runReview(args);
       } else if (args.subcommand === "config") {
         process.exitCode = await runConfig(args);
-      } else if (args.exec) {
-        process.exitCode = await runExec(args);
       } else {
         process.exitCode = await runOneShot(args);
       }
