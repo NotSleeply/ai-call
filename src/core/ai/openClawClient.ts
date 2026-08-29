@@ -461,6 +461,79 @@ function normalizeToolCalls(value: unknown): ToolCall[] {
   });
 }
 
+interface StreamToolCallAccumulator {
+  id: string;
+  type: "function" | "";
+  name: string;
+  arguments: string;
+}
+
+function appendStreamToolCallDeltas(
+  accumulators: Map<number, StreamToolCallAccumulator>,
+  value: unknown,
+): void {
+  if (value === undefined || value === null) {
+    return;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("模型返回了无法识别的流式工具调用格式");
+  }
+
+  for (const rawCall of value) {
+    if (!isRecord(rawCall)) {
+      throw new Error("模型返回了无法识别的流式工具调用格式");
+    }
+
+    const index =
+      typeof rawCall.index === "number" &&
+      Number.isInteger(rawCall.index) &&
+      rawCall.index >= 0
+        ? rawCall.index
+        : 0;
+    const current = accumulators.get(index) ?? {
+      id: "",
+      type: "",
+      name: "",
+      arguments: "",
+    };
+
+    if (typeof rawCall.id === "string") {
+      current.id = rawCall.id;
+    }
+    if (rawCall.type === "function") {
+      current.type = "function";
+    }
+
+    const fn = isRecord(rawCall.function) ? rawCall.function : undefined;
+    if (fn && typeof fn.name === "string") {
+      current.name += fn.name;
+    }
+    if (fn && typeof fn.arguments === "string") {
+      current.arguments += fn.arguments;
+    }
+
+    accumulators.set(index, current);
+  }
+}
+
+function normalizeStreamToolCalls(
+  accumulators: Map<number, StreamToolCallAccumulator>,
+): ToolCall[] {
+  const rawCalls = Array.from(accumulators.entries())
+    .sort(([left], [right]) => left - right)
+    .map(([, call]) => ({
+      id: call.id,
+      type: call.type,
+      function: {
+        name: call.name,
+        arguments: call.arguments,
+      },
+    }));
+
+  return normalizeToolCalls(rawCalls);
+}
+
 export class OpenClawClient {
   constructor(
     private readonly fetchImplementation: FetchImplementation = undiciFetch,
@@ -615,15 +688,27 @@ export class OpenClawClient {
     }
   }
 
-  private async requestChatStream(
+  private async requestChatStreamTurn(
     messages: ChatMessage[],
+    tools: ToolDefinition[],
     onDelta: (delta: string) => void,
     options: RequestOptions = {},
-  ): Promise<string> {
+  ): Promise<ChatTurn> {
     this.assertConfigured();
     const request = createRequestControl(options.signal);
 
     try {
+      const body: Record<string, unknown> = {
+        model: this.model,
+        messages,
+        stream: true,
+      };
+
+      if (tools.length > 0) {
+        body.tools = tools;
+        body.tool_choice = "auto";
+      }
+
       const response = await requestChatResponse(
         this.fetchImplementation,
         this.resolveEndpoint(),
@@ -633,15 +718,15 @@ export class OpenClawClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
         },
-        {
-          model: this.model,
-          messages,
-          stream: true,
-        },
+        body,
         request.signal,
       );
 
       let fullText = "";
+      const toolCallAccumulators = new Map<
+        number,
+        StreamToolCallAccumulator
+      >();
 
       request.startIdleTimeout();
       await this.readResponseLines(
@@ -655,14 +740,26 @@ export class OpenClawClient {
 
           try {
             const data = JSON.parse(payload) as {
-              choices?: Array<{ delta?: { content?: unknown } }>;
+              choices?: Array<{
+                delta?: {
+                  content?: unknown;
+                  tool_calls?: unknown;
+                };
+              }>;
             };
-            const delta = normalizeContent(data.choices?.[0]?.delta?.content);
+            const delta = data.choices?.[0]?.delta;
+            if (!delta) return;
 
-            if (delta) {
-              fullText += delta;
-              onDelta(delta);
+            const content = normalizeContent(delta.content);
+            if (content) {
+              fullText += content;
+              onDelta(content);
             }
+
+            appendStreamToolCallDeltas(
+              toolCallAccumulators,
+              delta.tool_calls,
+            );
           } catch {
             // 忽略无法解析的流式数据块，最终没有内容时会报错。
           }
@@ -670,26 +767,41 @@ export class OpenClawClient {
         () => request.noteActivity(),
       );
 
-      if (fullText) {
-        return fullText.trim();
+      const toolCalls = normalizeStreamToolCalls(toolCallAccumulators);
+      if (fullText.trim() || toolCalls.length > 0) {
+        return { content: fullText.trim(), toolCalls };
       }
 
       request.dispose();
-      const fallback = await this.requestChat(messages, [], options);
-      if (fallback.toolCalls.length > 0) {
-        throw new Error("普通流式请求收到了未请求的工具调用");
-      }
-
-      if (fallback.content) {
+      const fallback = await this.requestChat(messages, tools, options);
+      if (fallback.toolCalls.length === 0 && fallback.content) {
         onDelta(fallback.content);
       }
 
-      return fallback.content;
+      return fallback;
     } catch (error) {
       throw normalizeRequestError(error, request);
     } finally {
       request.dispose();
     }
+  }
+
+  private async requestChatStream(
+    messages: ChatMessage[],
+    onDelta: (delta: string) => void,
+    options: RequestOptions = {},
+  ): Promise<string> {
+    const turn = await this.requestChatStreamTurn(
+      messages,
+      [],
+      onDelta,
+      options,
+    );
+    if (turn.toolCalls.length > 0) {
+      throw new Error("普通流式请求收到了未请求的工具调用");
+    }
+
+    return turn.content;
   }
 
   async testConnection(options: RequestOptions = {}): Promise<void> {
@@ -806,5 +918,14 @@ export class OpenClawClient {
     options: RequestOptions = {},
   ): Promise<ChatTurn> {
     return this.requestChat(messages, tools, options);
+  }
+
+  async generateAgentTurnStream(
+    messages: ChatMessage[],
+    tools: ToolDefinition[] = [],
+    onDelta: (delta: string) => void = () => {},
+    options: RequestOptions = {},
+  ): Promise<ChatTurn> {
+    return this.requestChatStreamTurn(messages, tools, onDelta, options);
   }
 }

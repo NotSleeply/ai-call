@@ -255,6 +255,119 @@ test("已记录模型不支持 reasoning_effort 后后续请求不再重试", as
   }
 });
 
+test("Agent 流式响应可以解析文本和工具调用", async () => {
+  const previousFetch = globalThis.fetch;
+  let requestCount = 0;
+  const textEncoder = new TextEncoder();
+  const sse = (data: unknown) => "data: " + JSON.stringify(data) + "\n\n";
+  const tool = {
+    type: "function" as const,
+    function: {
+      name: "find_files",
+      description: "find files",
+      parameters: { type: "object", properties: {} },
+    },
+  };
+
+  globalThis.fetch = async (_input, init) => {
+    const requestBody = JSON.parse(
+      String(init?.body),
+    ) as Record<string, unknown>;
+    assert.equal(requestBody.stream, true);
+    requestCount += 1;
+
+    const chunks =
+      requestCount === 1
+        ? [
+            sse({
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: "call-1",
+                        type: "function",
+                        function: { name: "find_files", arguments: "" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            sse({
+              choices: [
+                {
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        function: {
+                          arguments: JSON.stringify({ pattern: "*.ts" }),
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            "data: [DONE]\n\n",
+          ]
+        : [
+            sse({ choices: [{ delta: { content: "流式" } }] }),
+            sse({ choices: [{ delta: { content: "回答" } }] }),
+            "data: [DONE]\n\n",
+          ];
+
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(textEncoder.encode(chunk));
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(body, {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    });
+  };
+
+  try {
+    const client = createClient();
+    const firstTurn = await client.generateAgentTurnStream(
+      [{ role: "user", content: "查找 TypeScript 文件" }],
+      [tool],
+    );
+
+    assert.equal(firstTurn.content, "");
+    assert.deepEqual(firstTurn.toolCalls, [
+      {
+        id: "call-1",
+        type: "function",
+        function: {
+          name: "find_files",
+          arguments: JSON.stringify({ pattern: "*.ts" }),
+        },
+      },
+    ]);
+
+    const deltas: string[] = [];
+    const finalTurn = await client.generateAgentTurnStream(
+      [{ role: "user", content: "总结" }],
+      [],
+      (delta) => deltas.push(delta),
+    );
+
+    assert.equal(finalTurn.content, "流式回答");
+    assert.deepEqual(deltas, ["流式", "回答"]);
+    assert.equal(requestCount, 2);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("fetch failed 会显示底层网络错误原因", async () => {
   const previousFetch = globalThis.fetch;
   const cause = Object.assign(

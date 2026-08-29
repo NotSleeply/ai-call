@@ -5,7 +5,7 @@ import type {
   OpenClawClient,
   ToolDefinition,
 } from "../ai/openClawClient.js";
-import { AgentRuntime } from "./runtime.js";
+import { AgentRuntime, type AgentStatus } from "./runtime.js";
 
 class FakeClient {
   readonly calls: Array<{ tools: ToolDefinition[] }> = [];
@@ -13,15 +13,19 @@ class FakeClient {
 
   constructor(private readonly turns: ChatTurn[]) {}
 
-  async generateAgentTurn(
+  async generateAgentTurnStream(
     _messages: unknown[],
     tools: ToolDefinition[],
+    onDelta: (delta: string) => void,
     options?: { signal?: AbortSignal },
   ): Promise<ChatTurn> {
     this.calls.push({ tools });
     this.signals.push(options?.signal);
     const turn = this.turns.shift();
     if (!turn) throw new Error("fake client 没有更多响应");
+    if (turn.toolCalls.length === 0 && turn.content) {
+      onDelta(turn.content);
+    }
     return turn;
   }
 }
@@ -91,4 +95,32 @@ test("Agent 将取消信号传递给模型请求", async () => {
   await runtime.run("检查项目", [], { signal: controller.signal });
 
   assert.equal(client.signals[0], controller.signal);
+});
+
+test("Agent 按阶段报告状态并转发最终回答增量", async () => {
+  const client = new FakeClient([
+    toolCall("find_files", { pattern: "*.ts" }, "1"),
+    { content: "已完成检查", toolCalls: [] },
+  ]);
+  const statuses: AgentStatus[] = [];
+  const deltas: string[] = [];
+  const runtime = new AgentRuntime(client as unknown as OpenClawClient);
+
+  const answer = await runtime.run("检查项目", [], {
+    rootDir: process.cwd(),
+    onStatus: (status) => statuses.push(status),
+    onDelta: (delta) => deltas.push(delta),
+  });
+
+  assert.equal(answer, "已完成检查");
+  assert.deepEqual(
+    statuses.map((status) => status.type),
+    ["thinking", "tool", "tool-result", "thinking", "generating"],
+  );
+  assert.deepEqual(deltas, ["已完成检查"]);
+  assert.equal(statuses[1].type, "tool");
+  assert.equal(
+    (statuses[1] as Extract<AgentStatus, { type: "tool" }>).toolName,
+    "find_files",
+  );
 });

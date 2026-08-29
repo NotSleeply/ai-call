@@ -9,11 +9,40 @@
 import { CLI_NAME } from "./args.js";
 import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
-import { AgentRuntime } from "../core/agent/runtime.js";
-import { normalizeTerminalText } from "./terminal-output.js";
+import { AgentRuntime, type AgentStatus } from "../core/agent/runtime.js";
+import {
+  normalizeTerminalText,
+  TerminalTextStreamNormalizer,
+} from "./terminal-output.js";
 import { RequestCancelledError } from "../core/ai/openClawClient.js";
 
 export const HISTORY_MESSAGE_LIMIT = 12;
+
+export function formatAgentStatus(status: AgentStatus): string {
+  switch (status.type) {
+    case "thinking":
+      return status.round > 1
+        ? "正在继续分析（第 " + status.round + " 轮）..."
+        : "正在分析问题...";
+    case "tool":
+      switch (status.toolName) {
+        case "find_files":
+          return "正在查找文件...";
+        case "read_file":
+          return "正在读取文件...";
+        case "search_text":
+          return "正在搜索内容...";
+        default:
+          return "正在获取本地信息...";
+      }
+    case "tool-result":
+      return "正在整理查询结果...";
+    case "finalizing":
+      return "正在整理最终回答...";
+    case "generating":
+      return "正在生成回答...";
+  }
+}
 
 async function readStdinIfPiped(): Promise<string> {
   if (process.stdin.isTTY) {
@@ -111,9 +140,12 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     process.stderr.write(`${CLI_NAME}: 未找到可延续的历史对话，本次以全新上下文提问\n`);
   }
 
-  const spinner = startSpinner("思考中...");
+  const spinner = startSpinner("正在分析问题...");
   const controller = new AbortController();
   let interrupted = false;
+  let streamedText = "";
+  let streamedOutput = "";
+  const streamNormalizer = new TerminalTextStreamNormalizer();
   const onSigint = () => {
     interrupted = true;
     controller.abort();
@@ -124,18 +156,46 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     const runtime = new AgentRuntime();
     const rawAnswer = await runtime.run(question, history, {
       signal: controller.signal,
+      onStatus: (status) => {
+        if (spinner) {
+          spinner.text = formatAgentStatus(status);
+        }
+      },
+      onDelta: (delta) => {
+        streamedText += delta;
+        const output = streamNormalizer.push(delta);
+        if (!output) {
+          return;
+        }
+
+        if (!streamedOutput) {
+          spinner?.stop();
+        }
+        streamedOutput += output;
+        process.stdout.write(output);
+      },
     });
     if (interrupted) {
       throw new RequestCancelledError();
     }
     const answer = normalizeTerminalText(rawAnswer);
-
-    spinner?.stop();
-    if (answer) {
-      process.stdout.write(answer);
+    const remainingOutput = streamNormalizer.finish();
+    if (remainingOutput) {
+      spinner?.stop();
+      streamedOutput += remainingOutput;
+      process.stdout.write(remainingOutput);
     }
 
-    if (answer && !answer.endsWith("\n")) {
+    if (!streamedText) {
+      spinner?.stop();
+      if (answer) {
+        process.stdout.write(answer);
+      }
+
+      if (answer && !answer.endsWith("\n")) {
+        process.stdout.write("\n");
+      }
+    } else if (streamedOutput && !streamedOutput.endsWith("\n")) {
       process.stdout.write("\n");
     }
 

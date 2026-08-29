@@ -31,7 +31,16 @@ ${TERMINAL_OUTPUT_RULES}`;
 export interface AgentRunOptions {
   rootDir?: string;
   signal?: AbortSignal;
+  onDelta?: (delta: string) => void;
+  onStatus?: (status: AgentStatus) => void;
 }
+
+export type AgentStatus =
+  | { type: "thinking"; round: number }
+  | { type: "tool"; toolName: string; callNumber: number }
+  | { type: "tool-result"; toolName: string; callNumber: number }
+  | { type: "finalizing" }
+  | { type: "generating" };
 
 function normalizeHistory(
   history: Array<{ role: string; content: string }>,
@@ -113,11 +122,22 @@ export class AgentRuntime {
     ];
     const rootDir = options.rootDir ?? process.cwd();
     let toolCallCount = 0;
+    let streamingAnswerStarted = false;
+    const emitDelta = (delta: string) => {
+      if (!streamingAnswerStarted) {
+        streamingAnswerStarted = true;
+        options.onStatus?.({ type: "generating" });
+      }
+      options.onDelta?.(delta);
+    };
 
     while (true) {
-      const turn = await this.client.generateAgentTurn(
+      const round = toolCallCount + 1;
+      options.onStatus?.({ type: "thinking", round });
+      const turn = await this.client.generateAgentTurnStream(
         messages,
         definitions,
+        emitDelta,
         { signal: options.signal },
       );
 
@@ -131,6 +151,11 @@ export class AgentRuntime {
 
       const toolCall = turn.toolCalls[0];
       toolCallCount++;
+      options.onStatus?.({
+        type: "tool",
+        toolName: toolCall.function.name,
+        callNumber: toolCallCount,
+      });
       messages.push(assistantToolMessage(turn));
 
       let toolContent = "";
@@ -164,12 +189,19 @@ export class AgentRuntime {
           : toolContent,
         tool_call_id: toolCall.id,
       });
+      options.onStatus?.({
+        type: "tool-result",
+        toolName: toolCall.function.name,
+        callNumber: toolCallCount,
+      });
 
       if (toolCallCount >= MAX_AGENT_TOOL_CALLS) {
         // 工具定义清空后，服务端不会再生成工具调用；这一步只负责最终总结。
-        const finalTurn = await this.client.generateAgentTurn(
+        options.onStatus?.({ type: "finalizing" });
+        const finalTurn = await this.client.generateAgentTurnStream(
           messages,
           [],
+          emitDelta,
           { signal: options.signal },
         );
         if (finalTurn.toolCalls.length > 0) {
