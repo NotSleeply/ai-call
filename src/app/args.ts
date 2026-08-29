@@ -15,7 +15,6 @@ export interface CliArgs {
   prompt: string;
   modelName?: string;
   baseUrl?: string;
-  stream: boolean;
   continueSession: boolean;
   initConfig: boolean;
   subcommand?: SubcommandName;
@@ -37,7 +36,6 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
 选项:
   -c, --continue         带上上一次对话的上下文继续提问
       --base-url <地址>  设置模型使用的 OpenAI-compatible API 地址（配合 model 子命令）
-      --no-stream        等待完整回答后一次性输出（本地查询循环使用完整响应）
   -h, --help             显示此帮助
   -v, --version          显示版本号
 
@@ -57,7 +55,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const result: CliArgs = {
     mode: "one-shot",
     prompt: "",
-    stream: true,
     continueSession: false,
     initConfig: false,
   };
@@ -93,9 +90,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
         result.baseUrl = value;
         break;
       }
-      case "--no-stream":
-        result.stream = false;
-        break;
       case "--init":
         result.initConfig = true;
         break;

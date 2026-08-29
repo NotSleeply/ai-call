@@ -152,7 +152,6 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 | `-c, --continue` | 带上一次对话的上下文 |
 | `--init` | 强制进入模型交互配置（model 子命令） |
 | `--base-url <地址>` | 设置模型配置中的 OpenAI-compatible API 地址（model 子命令） |
-| `--no-stream` | 使用完整响应输出（本地查询循环默认使用完整响应） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
 ### 输出约定与退出码

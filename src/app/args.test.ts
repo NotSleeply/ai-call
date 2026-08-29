@@ -63,6 +63,7 @@ test("执行权限、临时模型和旧配置显示参数已移除", () => {
   assert.throws(() => parseCliArgs(["-x", "hello"]), CliArgError);
   assert.throws(() => parseCliArgs(["--yes"]), CliArgError);
   assert.throws(() => parseCliArgs(["--show"]), CliArgError);
+  assert.throws(() => parseCliArgs(["--no-stream"]), CliArgError);
   assert.throws(
     () => parseCliArgs(["model", "deepseek-chat"]),
     /--base-url/,
