@@ -457,7 +457,6 @@ export class OpenClawClient {
       const body: Record<string, unknown> = {
         model: this.model,
         messages,
-        temperature: 0.7,
       };
 
       if (tools.length > 0) {
@@ -559,7 +558,6 @@ export class OpenClawClient {
         body: JSON.stringify({
           model: this.model,
           messages,
-          temperature: 0.7,
           stream: true,
         }),
         signal: request.signal,

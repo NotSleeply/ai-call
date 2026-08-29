@@ -97,12 +97,14 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
     const body = JSON.parse(String(init?.body)) as {
       model?: string;
       messages?: Array<{ role?: string; content?: string }>;
+      temperature?: unknown;
       stream?: boolean;
     };
     assert.equal(body.model, "test-model");
     assert.deepEqual(body.messages, [
       { role: "user", content: "请回复 OK。" },
     ]);
+    assert.equal(body.temperature, undefined);
     assert.equal(body.stream, undefined);
 
     return new Response(
@@ -147,13 +149,19 @@ test("fetch failed 会显示底层网络错误原因", async () => {
   }
 });
 
-test("流式响应已输出内容后不会重试请求", async () => {
+test("流式响应中断后不重试且不强制发送 temperature", async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;
   let pullCount = 0;
 
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_input, init) => {
     fetchCount += 1;
+    const requestBody = JSON.parse(String(init?.body)) as {
+      temperature?: unknown;
+      stream?: unknown;
+    };
+    assert.equal(requestBody.temperature, undefined);
+    assert.equal(requestBody.stream, true);
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {
         if (pullCount === 0) {

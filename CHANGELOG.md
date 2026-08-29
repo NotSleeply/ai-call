@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 对不支持自定义温度的模型不再强制发送 `temperature` 参数
+
 ## [1.0.11] - 2026-08-30
 
 ### Fixed
