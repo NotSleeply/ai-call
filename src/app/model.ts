@@ -5,86 +5,43 @@
  * API Key 只在交互终端中输入，不作为命令行参数传递。
  */
 import { config as loadDotEnv } from "dotenv";
-import { homedir } from "os";
-import { join, dirname } from "path";
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "fs";
 import { CLI_NAME } from "./args.js";
 import { askSecret, askText } from "./tty.js";
 import type { CliArgs } from "./args.js";
 import { OpenClawClient } from "../core/ai/openClawClient.js";
+import {
+  MODEL_CONFIG_KEYS,
+  parseConfigValues,
+  readConfigValues,
+  renderConfig,
+  resolveConfigPath as resolveSharedConfigPath,
+  writeConfigValues,
+} from "../core/config.js";
 
 export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
 export const DEFAULT_MODEL = "gpt-5-mini";
 
-export const CONFIG_KEYS = [
-  "AIC_API_KEY",
-  "AIC_BASE_URL",
-  "AIC_MODEL",
-] as const;
-
-interface EnvLine {
-  raw: string;
-  key: string | null;
-}
-
-function parseEnvLines(content: string): EnvLine[] {
-  if (!content) {
-    return [];
-  }
-
-  return content.split(/\r?\n/).map((raw) => {
-    const match = raw.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    return { raw, key: match ? match[1] : null };
-  });
-}
-
-function envMap(lines: EnvLine[]): Map<string, string> {
-  const values = new Map<string, string>();
-
-  for (const line of lines) {
-    if (line.key) {
-      values.set(line.key, line.raw.slice(line.raw.indexOf("=") + 1).trim());
-    }
-  }
-
-  return values;
-}
+export const CONFIG_KEYS = MODEL_CONFIG_KEYS;
 
 export function renderModelConfig(
   modelName: string,
   baseUrl: string,
   apiKey: string,
 ): string {
-  return [
-    `AIC_API_KEY=${apiKey}`,
-    `AIC_BASE_URL=${baseUrl}`,
-    `AIC_MODEL=${modelName}`,
-  ].join("\n") + "\n";
+  const values = new Map<string, string>([
+    ["AIC_API_KEY", apiKey],
+    ["AIC_BASE_URL", baseUrl],
+    ["AIC_MODEL", modelName],
+  ]);
+  return renderConfig(values);
 }
 
-export function resolveConfigPath(): string {
-  return join(homedir(), ".ai-call", ".env");
-}
+export const resolveConfigPath = resolveSharedConfigPath;
 
 loadDotEnv({
   quiet: true,
   path: [".env", resolveConfigPath()],
 });
-
-function readUserConfig(): { values: Map<string, string> } {
-  const configPath = resolveConfigPath();
-  const content = existsSync(configPath)
-    ? readFileSync(configPath, "utf8")
-    : "";
-
-  return { values: envMap(parseEnvLines(content)) };
-}
 
 function effectiveValue(
   key: (typeof CONFIG_KEYS)[number],
@@ -128,7 +85,7 @@ export function isCompleteModelConfig(
 }
 
 export function hasApiKey(content: string): boolean {
-  const values = envMap(parseEnvLines(content));
+  const values = parseConfigValues(content);
   return Boolean(values.get("AIC_API_KEY")?.trim());
 }
 
@@ -139,7 +96,7 @@ interface CurrentModelConfig {
 }
 
 function readCurrentModelConfig(): CurrentModelConfig {
-  const { values } = readUserConfig();
+  const values = readConfigValues();
   return {
     model: effectiveValue("AIC_MODEL", values),
     baseUrl: effectiveValue("AIC_BASE_URL", values),
@@ -280,16 +237,13 @@ function saveModelConfig(
   baseUrl: string,
   apiKey: string,
 ): number {
+  const values = readConfigValues(configPath);
+  values.set("AIC_API_KEY", apiKey);
+  values.set("AIC_BASE_URL", baseUrl);
+  values.set("AIC_MODEL", modelName);
+
   try {
-    mkdirSync(dirname(configPath), { recursive: true });
-    writeFileSync(
-      configPath,
-      renderModelConfig(modelName, baseUrl, apiKey),
-      { encoding: "utf8", mode: 0o600 },
-    );
-    if (process.platform !== "win32") {
-      chmodSync(configPath, 0o600);
-    }
+    writeConfigValues(values, configPath);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: 保存模型配置失败: ${message}\n`);

@@ -35,6 +35,7 @@
 - 🧩 标准输入组合：git diff、日志等文本都可以通过管道交给 `aic` 分析
 - 🧠 单一 OpenAI-compatible API 配置，DeepSeek、OpenAI、OpenRouter 等统一接入
 - ⚙️ `aic model` 配置当前模型与 API 地址，始终只保留一组配置
+- 🌐 默认支持标准代理环境变量，也可以用 `aic proxy --init` 管理代理
 
 ---
 
@@ -70,7 +71,7 @@ aic model
 aic model --init
 ```
 
-它会强制进入交互配置，已有值可以直接回车保留。每次保存都会重写用户级配置文件，只保留当前模型、API 地址和 API Key，不会与之前的模型配置共存。配置保存后会询问是否立即测试模型连接：输入 `y` 才测试，直接回车或输入其他内容都会跳过。测试失败不会回滚已经保存的配置。不要把 API Key 写进命令行参数。
+它会强制进入交互配置，已有值可以直接回车保留。每次保存都会重写用户级配置文件，模型配置只保留当前这一组，同时保留同一文件中的代理配置，不会与之前的模型配置共存。配置保存后会询问是否立即测试模型连接：输入 `y` 才测试，直接回车或输入其他内容都会跳过。测试失败不会回滚已经保存的配置。不要把 API Key 写进命令行参数。
 
 切换模型时可以继续使用非交互方式：
 
@@ -94,7 +95,22 @@ aic model deepseek-chat --base-url https://api.deepseek.com/v1
 AIC_API_KEY=你的Key
 AIC_BASE_URL=https://api.openai.com/v1
 AIC_MODEL=gpt-5-mini
+
+# 可选代理配置，也可以运行 aic proxy --init 设置
+# HTTPS_PROXY=http://127.0.0.1:7890
+# HTTP_PROXY=http://127.0.0.1:7890
+# ALL_PROXY=http://127.0.0.1:7890
+# NO_PROXY=127.0.0.1,localhost
 ```
+
+**代理配置**：
+
+```bash
+aic proxy
+aic proxy --init
+```
+
+`aic` 默认读取 `HTTPS_PROXY`、`HTTP_PROXY`、`ALL_PROXY` 和 `NO_PROXY`，同时兼容对应的小写环境变量。通过 `aic proxy --init` 保存的值与模型配置放在同一个 `~/.ai-call/.env` 中，并优先于当前进程的环境变量。代理地址支持 HTTP 和 HTTPS；如果没有单独设置 `HTTPS_PROXY`，会依次回退到 `HTTP_PROXY` 或 `ALL_PROXY`。输入 `-` 可以清除某一项本地配置并回退到环境变量。
 
 ---
 
@@ -158,7 +174,7 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 | 参数 | 说明 |
 | --- | --- |
 | `-c, --continue` | 带上一次对话的上下文 |
-| `--init` | 强制进入模型交互配置（model 子命令） |
+| `--init` | 强制进入模型或代理交互配置（model / proxy 子命令） |
 | `--base-url <地址>` | 设置模型配置中的 OpenAI-compatible API 地址（model 子命令） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
@@ -181,10 +197,13 @@ ai-call/
 │       ├── args.ts                 # 参数解析与帮助文本
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
 │       ├── model.ts                # aic model 模型配置
+│       ├── proxy.ts                # aic proxy 代理配置
 │       ├── tty.ts                  # API Key 输入与转圈提示
 │       └── assistant.ts            # 助手门面
 ├── src/core/
 │   ├── ai/openClawClient.ts        # OpenAI-compatible 客户端与 tool_calls
+│   ├── config.ts                    # 模型与代理共享配置文件
+│   ├── network/proxy.ts             # 标准代理环境与请求调度
 │   ├── agent/
 │       ├── runtime.ts              # 只读查询循环与工具调用
 │       └── tools.ts                # 文件查找、读取、正则搜索工具

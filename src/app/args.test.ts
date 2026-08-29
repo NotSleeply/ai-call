@@ -25,6 +25,22 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.initConfig, false);
 });
 
+test("proxy 子命令支持查看和交互配置", () => {
+  const viewArgs = parseCliArgs(["proxy"]);
+  assert.equal(viewArgs.subcommand, "proxy");
+  assert.equal(viewArgs.initConfig, false);
+  assert.equal(viewArgs.prompt, "");
+
+  const initArgs = parseCliArgs(["proxy", "--init"]);
+  assert.equal(initArgs.subcommand, "proxy");
+  assert.equal(initArgs.initConfig, true);
+  assert.equal(initArgs.prompt, "");
+  assert.throws(
+    () => parseCliArgs(["proxy", "http://127.0.0.1:7890"]),
+    /proxy 子命令不接受参数/,
+  );
+});
+
 test("clear 子命令只用于清空本地历史", () => {
   const args = parseCliArgs(["clear"]);
 
@@ -52,7 +68,7 @@ test("model --init 强制进入交互配置", () => {
   assert.equal(args.prompt, "");
   assert.throws(
     () => parseCliArgs(["--init", "hello"]),
-    /--init 只能配合 model 子命令使用/,
+    /--init 只能配合 model 或 proxy 子命令使用/,
   );
   assert.throws(
     () =>

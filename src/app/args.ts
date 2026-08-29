@@ -4,9 +4,9 @@
  * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
-export type SubcommandName = "model" | "clear";
+export type SubcommandName = "model" | "proxy" | "clear";
 
-export const SUBCOMMANDS: SubcommandName[] = ["model", "clear"];
+export const SUBCOMMANDS: SubcommandName[] = ["model", "proxy", "clear"];
 
 export const CLI_NAME = "aic";
 
@@ -32,6 +32,8 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} model                      查看配置；不完整时进入交互配置
   ${CLI_NAME} model --init                强制进入交互配置
   ${CLI_NAME} model <名称> --base-url <地址>  非交互设置当前模型和 API 地址
+  ${CLI_NAME} proxy                       查看当前代理配置
+  ${CLI_NAME} proxy --init                交互配置标准网络代理
   ${CLI_NAME} clear                       清空本地 -c 对话历史
 
 选项:
@@ -118,8 +120,12 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
   result.prompt = promptParts.join(" ").trim();
 
-  if (result.initConfig && result.subcommand !== "model") {
-    throw new CliArgError("--init 只能配合 model 子命令使用");
+  if (
+    result.initConfig &&
+    result.subcommand !== "model" &&
+    result.subcommand !== "proxy"
+  ) {
+    throw new CliArgError("--init 只能配合 model 或 proxy 子命令使用");
   }
 
   if (result.subcommand === "model") {
@@ -141,6 +147,20 @@ export function parseCliArgs(argv: string[]): CliArgs {
     if (!result.modelName && result.baseUrl) {
       throw new CliArgError("设置 API 地址时必须同时提供模型名称");
     }
+  } else if (result.subcommand === "proxy") {
+    if (promptParts.length > 0) {
+      throw new CliArgError("proxy 子命令不接受参数");
+    }
+
+    if (result.baseUrl) {
+      throw new CliArgError("--base-url 只能配合 model 子命令使用");
+    }
+
+    if (result.continueSession) {
+      throw new CliArgError("proxy 子命令不能配合 -c");
+    }
+
+    result.prompt = "";
   } else if (result.subcommand === "clear") {
     if (promptParts.length > 0) {
       throw new CliArgError("clear 子命令不接受问题参数");

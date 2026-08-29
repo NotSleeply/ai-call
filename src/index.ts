@@ -7,6 +7,7 @@
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
 import { runModel } from "./app/model.js";
+import { runProxy } from "./app/proxy.js";
 import { runClear } from "./app/clear.js";
 import { VERSION } from "./version.js";
 
@@ -35,6 +36,8 @@ async function main(): Promise<void> {
     case "one-shot": {
       if (args.subcommand === "model") {
         process.exitCode = await runModel(args);
+      } else if (args.subcommand === "proxy") {
+        process.exitCode = await runProxy(args);
       } else if (args.subcommand === "clear") {
         process.exitCode = await runClear();
       } else {
