@@ -17,6 +17,7 @@ export interface CliArgs {
   baseUrl?: string;
   stream: boolean;
   continueSession: boolean;
+  initConfig: boolean;
   subcommand?: SubcommandName;
 }
 
@@ -29,8 +30,9 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   echo <内容> | ${CLI_NAME} <问题>       管道内容作为上下文再提问
   echo <内容> | ${CLI_NAME}              直接处理管道内容
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
-  ${CLI_NAME} model                      显示当前模型配置
-  ${CLI_NAME} model <名称> --base-url <地址>  设置当前模型和 API 地址
+  ${CLI_NAME} model                      查看配置；不完整时进入交互配置
+  ${CLI_NAME} model --init                强制进入交互配置
+  ${CLI_NAME} model <名称> --base-url <地址>  非交互设置当前模型和 API 地址
 
 选项:
   -c, --continue         带上上一次对话的上下文继续提问
@@ -57,6 +59,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     prompt: "",
     stream: true,
     continueSession: false,
+    initConfig: false,
   };
 
   const promptParts: string[] = [];
@@ -93,6 +96,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--no-stream":
         result.stream = false;
         break;
+      case "--init":
+        result.initConfig = true;
+        break;
       case "-c":
       case "--continue":
         result.continueSession = true;
@@ -117,7 +123,15 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
   result.prompt = promptParts.join(" ").trim();
 
+  if (result.initConfig && result.subcommand !== "model") {
+    throw new CliArgError("--init 只能配合 model 子命令使用");
+  }
+
   if (result.subcommand === "model") {
+    if (result.initConfig && (promptParts.length > 0 || result.baseUrl)) {
+      throw new CliArgError("model --init 不能同时提供模型名称或 --base-url");
+    }
+
     if (promptParts.length > 1) {
       throw new CliArgError("model 子命令最多接受一个模型名称");
     }

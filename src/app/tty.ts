@@ -6,6 +6,7 @@
  * - 在交互终端中显示等待提示
  */
 import yoctoSpinner from "yocto-spinner";
+import { createInterface } from "readline/promises";
 
 export type SpinnerInstance = ReturnType<typeof yoctoSpinner>;
 
@@ -26,6 +27,26 @@ export function startSpinner(text: string): SpinnerInstance | null {
     return null;
   }
   return yoctoSpinner({ text }).start();
+}
+
+/**
+ * 从交互终端读取一行普通文本，提示和输入都写入 stderr，避免污染 stdout。
+ */
+export async function askText(prompt: string): Promise<string> {
+  if (process.stdin.isTTY !== true) {
+    return "";
+  }
+
+  const readline = createInterface({
+    input: process.stdin,
+    output: process.stderr,
+  });
+
+  try {
+    return (await readline.question(prompt)).trim();
+  } finally {
+    readline.close();
+  }
 }
 
 /**

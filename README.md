@@ -55,13 +55,29 @@ npm link
 
 ## 配置
 
-**首次使用或切换模型**：
+**查看或配置模型**：
+
+```bash
+aic model
+```
+
+`aic model` 默认只查看当前配置。首次使用或配置不完整时，会依次提示输入模型名称、API 地址和 API Key；API Key 输入时不会回显，并保存到用户级 `~/.ai-call/.env`。配置完整后再次运行只显示当前模型、API 地址和脱敏后的 Key。
+
+已有配置但想重新设置时，使用：
+
+```bash
+aic model --init
+```
+
+它会强制进入交互配置，已有值可以直接回车保留。不要把 API Key 写进命令行参数。
+
+切换模型时可以继续使用非交互方式：
 
 ```bash
 aic model deepseek-chat --base-url https://api.deepseek.com/v1
 ```
 
-命令会在交互终端中提示输入 API Key，输入内容不会回显，并保存到用户级 `~/.ai-call/.env`。已有 Key 时直接回车即可保留；不要把 Key 写进命令行参数。`aic model` 可查看当前模型、API 地址和脱敏后的 Key。
+命令会在交互终端中提示输入新的 API Key；直接回车可以保留当前 Key。
 
 只支持 OpenAI-compatible Chat Completions API。模型名称不能用来自动推断 API 地址，因此切换服务时必须明确提供 `--base-url`。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
 
@@ -133,6 +149,7 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 | 参数 | 说明 |
 | --- | --- |
 | `-c, --continue` | 带上一次对话的上下文 |
+| `--init` | 强制进入模型交互配置（model 子命令） |
 | `--base-url <地址>` | 设置模型配置中的 OpenAI-compatible API 地址（model 子命令） |
 | `--no-stream` | 使用完整响应输出（本地查询循环默认使用完整响应） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |

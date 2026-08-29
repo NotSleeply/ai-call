@@ -22,6 +22,30 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.subcommand, "model");
   assert.equal(args.modelName, undefined);
   assert.equal(args.baseUrl, undefined);
+  assert.equal(args.initConfig, false);
+});
+
+test("model --init 强制进入交互配置", () => {
+  const args = parseCliArgs(["model", "--init"]);
+
+  assert.equal(args.subcommand, "model");
+  assert.equal(args.initConfig, true);
+  assert.equal(args.prompt, "");
+  assert.throws(
+    () => parseCliArgs(["--init", "hello"]),
+    /--init 只能配合 model 子命令使用/,
+  );
+  assert.throws(
+    () =>
+      parseCliArgs([
+        "model",
+        "--init",
+        "gpt-5-mini",
+        "--base-url",
+        "https://api.openai.com/v1",
+      ]),
+    /model --init 不能同时提供模型名称或 --base-url/,
+  );
 });
 
 test("Git 操作名称不再作为专用子命令", () => {

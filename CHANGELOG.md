@@ -7,6 +7,7 @@
 ### Added
 
 - `aic model` 配置当前模型与 OpenAI-compatible API 地址，始终只保留一组配置
+- 首次运行或使用 `aic model --init` 时交互输入模型名称、API 地址和 API Key
 
 ### Removed
 

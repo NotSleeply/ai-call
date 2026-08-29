@@ -5,6 +5,7 @@ import {
   DEFAULT_API_BASE_URL,
   DEFAULT_MODEL,
   hasApiKey,
+  isCompleteModelConfig,
   validateBaseUrl,
 } from "./model.js";
 
@@ -26,4 +27,28 @@ test("模型配置只接受 HTTP 或 HTTPS 地址", () => {
   assert.equal(validateBaseUrl("http://localhost:11434/v1"), true);
   assert.equal(validateBaseUrl("ftp://example.com"), false);
   assert.equal(validateBaseUrl("not-a-url"), false);
+});
+
+test("完整模型配置必须包含模型、有效地址和 API Key", () => {
+  assert.equal(
+    isCompleteModelConfig(
+      "gpt-5-mini",
+      "https://api.openai.com/v1",
+      "sk-test",
+    ),
+    true,
+  );
+  assert.equal(
+    isCompleteModelConfig("", "https://api.openai.com/v1", "sk-test"),
+    false,
+  );
+  assert.equal(isCompleteModelConfig("gpt-5-mini", "", "sk-test"), false);
+  assert.equal(
+    isCompleteModelConfig("gpt-5-mini", "ftp://example.com", "sk-test"),
+    false,
+  );
+  assert.equal(
+    isCompleteModelConfig("gpt-5-mini", "https://api.openai.com/v1", ""),
+    false,
+  );
 });

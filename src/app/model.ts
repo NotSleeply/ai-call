@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "fs";
 import { CLI_NAME } from "./args.js";
-import { askSecret } from "./tty.js";
+import { askSecret, askText } from "./tty.js";
 import type { CliArgs } from "./args.js";
 
 export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
@@ -129,17 +129,42 @@ export function validateBaseUrl(value: string): boolean {
   }
 }
 
+export function isCompleteModelConfig(
+  modelName: string,
+  baseUrl: string,
+  apiKey: string,
+): boolean {
+  return Boolean(
+    modelName.trim() && validateBaseUrl(baseUrl.trim()) && apiKey.trim(),
+  );
+}
+
 export function hasApiKey(content: string): boolean {
   const values = envMap(parseEnvLines(content));
   return Boolean(values.get("AIC_API_KEY")?.trim());
 }
 
-function showModel(): void {
-  const { values } = readUserConfig();
-  const model = effectiveValue("AIC_MODEL", values) || DEFAULT_MODEL;
-  const baseUrl =
-    effectiveValue("AIC_BASE_URL", values) || DEFAULT_API_BASE_URL;
-  const apiKey = effectiveValue("AIC_API_KEY", values);
+interface CurrentModelConfig {
+  content: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+}
+
+function readCurrentModelConfig(): CurrentModelConfig {
+  const { content, values } = readUserConfig();
+  return {
+    content,
+    model: effectiveValue("AIC_MODEL", values),
+    baseUrl: effectiveValue("AIC_BASE_URL", values),
+    apiKey: effectiveValue("AIC_API_KEY", values),
+  };
+}
+
+function showModel(config = readCurrentModelConfig()): void {
+  const model = config.model || DEFAULT_MODEL;
+  const baseUrl = config.baseUrl || DEFAULT_API_BASE_URL;
+  const apiKey = config.apiKey;
 
   process.stdout.write("当前模型配置:\n");
   process.stdout.write(`模型: ${model}\n`);
@@ -150,46 +175,97 @@ function showModel(): void {
 
 function writeMissingKeyHint(configPath: string): void {
   process.stderr.write(
-    `${CLI_NAME}: 未配置 AIC_API_KEY。交互终端请运行 aic model <模型> --base-url <地址> 并输入；非交互环境请设置环境变量 AIC_API_KEY，或在 ${configPath} 中添加 AIC_API_KEY=...\n`,
+    `${CLI_NAME}: 未配置 AIC_API_KEY，请运行 ${CLI_NAME} model 完成首次配置，或在环境变量和 ${configPath} 中配置。\n`,
   );
 }
 
-export async function runModel(args: CliArgs): Promise<number> {
-  const modelName = args.modelName?.trim() ?? "";
+function writeInteractiveSetupHint(configPath: string): void {
+  process.stderr.write(
+    `${CLI_NAME}: 当前模型配置不完整，请在交互终端运行 ${CLI_NAME} model 完成模型、API 地址和 API Key 配置；非交互环境请设置 AIC_MODEL、AIC_BASE_URL 和 AIC_API_KEY，或编辑 ${configPath}。\n`,
+  );
+}
 
-  if (!modelName) {
-    showModel();
-    return 0;
-  }
-
-  const baseUrl = args.baseUrl?.trim() ?? "";
-  if (!validateBaseUrl(baseUrl)) {
-    process.stderr.write(
-      `${CLI_NAME}: --base-url 必须是有效的 http:// 或 https:// 地址\n`,
-    );
-    return 1;
-  }
-
-  const configPath = resolveConfigPath();
-  const { content, values } = readUserConfig();
-  const existingApiKey = effectiveValue("AIC_API_KEY", values);
-  let enteredApiKey = "";
-
-  if (process.stdin.isTTY === true) {
-    const prompt = existingApiKey
-      ? "API Key（回车保留当前值，输入时不显示）: "
-      : "API Key（输入时不显示）: ";
-    enteredApiKey = (await askSecret(prompt)).trim();
-
-    if (!existingApiKey && !enteredApiKey) {
-      process.stderr.write(`${CLI_NAME}: API Key 不能为空\n`);
-      return 1;
+async function askRequiredText(
+  prompt: string,
+  label: string,
+  currentValue = "",
+): Promise<string> {
+  while (true) {
+    const enteredValue = (await askText(prompt)).trim();
+    const value = enteredValue || currentValue;
+    if (value) {
+      return value;
     }
-  } else if (!existingApiKey) {
-    writeMissingKeyHint(configPath);
-    return 1;
+
+    if (!value) {
+      process.stderr.write(`${CLI_NAME}: ${label}不能为空，请重新输入。\n`);
+    }
+  }
+}
+
+async function runInteractiveModelSetup(
+  config: CurrentModelConfig,
+): Promise<number> {
+  const configPath = resolveConfigPath();
+  process.stderr.write("首次配置 AI Call，请依次输入以下内容：\n");
+
+  const modelPrompt = config.model
+    ? "1/3 模型名称（回车保留当前值）: "
+    : "1/3 模型名称: ";
+  const modelName = await askRequiredText(modelPrompt, "模型名称", config.model);
+
+  let baseUrl = "";
+  while (!baseUrl) {
+    const prompt = config.baseUrl
+      ? "2/3 API 地址（回车保留当前值）: "
+      : "2/3 API 地址: ";
+    const entered = await askText(prompt);
+    const candidate = entered || config.baseUrl;
+    if (validateBaseUrl(candidate)) {
+      baseUrl = candidate;
+      continue;
+    }
+
+    process.stderr.write(
+      `${CLI_NAME}: API 地址必须是有效的 http:// 或 https:// 地址，请重新输入。\n`,
+    );
   }
 
+  let enteredApiKey = "";
+  if (config.apiKey) {
+    enteredApiKey = (await askSecret(
+      "3/3 API Key（回车保留当前值，输入时不显示）: ",
+    )).trim();
+  } else {
+    enteredApiKey = await askRequiredSecret();
+  }
+
+  return saveModelConfig(
+    configPath,
+    config.content,
+    modelName,
+    baseUrl,
+    enteredApiKey || undefined,
+  );
+}
+
+async function askRequiredSecret(): Promise<string> {
+  while (true) {
+    const value = (await askSecret("3/3 API Key（输入时不显示）: ")).trim();
+    if (value) {
+      return value;
+    }
+    process.stderr.write(`${CLI_NAME}: API Key 不能为空，请重新输入。\n`);
+  }
+}
+
+function saveModelConfig(
+  configPath: string,
+  content: string,
+  modelName: string,
+  baseUrl: string,
+  enteredApiKey?: string,
+): number {
   const updates = new Map<string, string>();
   if (enteredApiKey) {
     updates.set("AIC_API_KEY", enteredApiKey);
@@ -223,4 +299,63 @@ export async function runModel(args: CliArgs): Promise<number> {
   process.stdout.write(`模型: ${modelName}\n`);
   process.stdout.write(`API 地址: ${baseUrl}\n`);
   return 0;
+}
+
+export async function runModel(args: CliArgs): Promise<number> {
+  const modelName = args.modelName?.trim() ?? "";
+
+  if (!modelName) {
+    const current = readCurrentModelConfig();
+    if (
+      !args.initConfig &&
+      isCompleteModelConfig(current.model, current.baseUrl, current.apiKey)
+    ) {
+      showModel(current);
+      return 0;
+    }
+
+    if (process.stdin.isTTY !== true) {
+      showModel(current);
+      writeInteractiveSetupHint(resolveConfigPath());
+      return 1;
+    }
+
+    return runInteractiveModelSetup(current);
+  }
+
+  const baseUrl = args.baseUrl?.trim() ?? "";
+  if (!validateBaseUrl(baseUrl)) {
+    process.stderr.write(
+      `${CLI_NAME}: --base-url 必须是有效的 http:// 或 https:// 地址\n`,
+    );
+    return 1;
+  }
+
+  const current = readCurrentModelConfig();
+  const configPath = resolveConfigPath();
+  const existingApiKey = current.apiKey;
+  let enteredApiKey = "";
+
+  if (process.stdin.isTTY === true) {
+    const prompt = existingApiKey
+      ? "API Key（回车保留当前值，输入时不显示）: "
+      : "API Key（输入时不显示）: ";
+    enteredApiKey = (await askSecret(prompt)).trim();
+
+    if (!existingApiKey && !enteredApiKey) {
+      process.stderr.write(`${CLI_NAME}: API Key 不能为空\n`);
+      return 1;
+    }
+  } else if (!existingApiKey) {
+    writeMissingKeyHint(configPath);
+    return 1;
+  }
+
+  return saveModelConfig(
+    configPath,
+    current.content,
+    modelName,
+    baseUrl,
+    enteredApiKey || undefined,
+  );
 }
