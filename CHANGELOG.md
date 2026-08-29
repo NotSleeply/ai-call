@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-08-30
+
 ### Added
 
 - 新增 `aic data --clear`，清除本地运行数据但保留模型、API Key 和代理配置
