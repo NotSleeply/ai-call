@@ -149,7 +149,6 @@ export async function runOneShot(args: CliArgs): Promise<number> {
   try {
     const runtime = new AgentRuntime();
     const answer = await runtime.run(question, history, {
-      modelOverride: args.model,
       allowActions: args.exec,
       confirmAction: async (request) => {
         spinner?.stop();

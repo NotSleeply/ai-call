@@ -29,10 +29,6 @@ export interface ToolDefinition {
   };
 }
 
-export interface ChatGenerationOptions {
-  modelOverride?: string;
-}
-
 export interface ChatTurn {
   content: string;
   toolCalls: ToolCall[];
@@ -138,7 +134,9 @@ export class OpenClawClient {
 
   private assertConfigured(): void {
     if (!this.apiKey) {
-      throw new Error("未配置 AIC_API_KEY，请运行 aic config 完成配置。");
+      throw new Error(
+        "未配置 AIC_API_KEY，请运行 aic model <模型> --base-url <地址> 设置，或在环境变量和 ~/.ai-call/.env 中配置。",
+      );
     }
   }
 
@@ -176,12 +174,11 @@ export class OpenClawClient {
   private async requestChat(
     messages: ChatMessage[],
     tools: ToolDefinition[] = [],
-    modelOverride?: string,
   ): Promise<ChatTurn> {
     this.assertConfigured();
 
     const body: Record<string, unknown> = {
-      model: (modelOverride || "").trim() || this.model,
+      model: this.model,
       messages,
       temperature: 0.7,
     };
@@ -262,7 +259,6 @@ export class OpenClawClient {
   private async requestChatStream(
     messages: ChatMessage[],
     onDelta: (delta: string) => void,
-    modelOverride?: string,
   ): Promise<string> {
     this.assertConfigured();
 
@@ -273,7 +269,7 @@ export class OpenClawClient {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: (modelOverride || "").trim() || this.model,
+        model: this.model,
         messages,
         temperature: 0.7,
         stream: true,
@@ -315,7 +311,7 @@ export class OpenClawClient {
       return fullText.trim();
     }
 
-    const fallback = await this.requestChat(messages, [], modelOverride);
+    const fallback = await this.requestChat(messages, []);
     if (fallback.toolCalls.length > 0) {
       throw new Error("普通流式请求收到了未请求的工具调用");
     }
@@ -330,7 +326,6 @@ export class OpenClawClient {
   async generateReplyStream(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
-    options: ChatGenerationOptions = {},
     onDelta: (delta: string) => void = () => {},
   ): Promise<string> {
     const question = userInput.trim();
@@ -342,14 +337,12 @@ export class OpenClawClient {
     return this.requestChatStream(
       this.buildMessages(DEFAULT_SYSTEM_PROMPT, question, conversationHistory),
       onDelta,
-      options.modelOverride,
     );
   }
 
   async generateReply(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
-    options: ChatGenerationOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -360,7 +353,6 @@ export class OpenClawClient {
     const turn = await this.requestChat(
       this.buildMessages(DEFAULT_SYSTEM_PROMPT, question, conversationHistory),
       [],
-      options.modelOverride,
     );
 
     if (turn.toolCalls.length > 0) {
@@ -374,7 +366,6 @@ export class OpenClawClient {
     systemPrompt: string,
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
-    options: ChatGenerationOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -389,7 +380,6 @@ export class OpenClawClient {
         conversationHistory,
       ),
       [],
-      options.modelOverride,
     );
 
     if (turn.toolCalls.length > 0) {
@@ -403,7 +393,6 @@ export class OpenClawClient {
     systemPrompt: string,
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
-    options: ChatGenerationOptions = {},
     onDelta: (delta: string) => void = () => {},
   ): Promise<string> {
     const question = userInput.trim();
@@ -419,15 +408,13 @@ export class OpenClawClient {
         conversationHistory,
       ),
       onDelta,
-      options.modelOverride,
     );
   }
 
   async generateAgentTurn(
     messages: ChatMessage[],
     tools: ToolDefinition[] = [],
-    options: ChatGenerationOptions = {},
   ): Promise<ChatTurn> {
-    return this.requestChat(messages, tools, options.modelOverride);
+    return this.requestChat(messages, tools);
   }
 }

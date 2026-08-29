@@ -7,7 +7,7 @@
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
 import { runCommit, runReview } from "./app/git-commands.js";
-import { runConfig } from "./app/config.js";
+import { runModel } from "./app/model.js";
 import { VERSION } from "./version.js";
 
 async function main(): Promise<void> {
@@ -37,8 +37,8 @@ async function main(): Promise<void> {
         process.exitCode = await runCommit(args);
       } else if (args.subcommand === "review") {
         process.exitCode = await runReview(args);
-      } else if (args.subcommand === "config") {
-        process.exitCode = await runConfig(args);
+      } else if (args.subcommand === "model") {
+        process.exitCode = await runModel(args);
       } else {
         process.exitCode = await runOneShot(args);
       }

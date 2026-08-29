@@ -4,22 +4,22 @@
  * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
-export type SubcommandName = "commit" | "review" | "config";
+export type SubcommandName = "commit" | "review" | "model";
 
-export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "config"];
+export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "model"];
 
 export const CLI_NAME = "aic";
 
 export interface CliArgs {
   mode: "one-shot" | "help" | "version";
   prompt: string;
-  model?: string;
+  modelName?: string;
+  baseUrl?: string;
   stream: boolean;
   exec: boolean;
   continueSession: boolean;
   subcommand?: SubcommandName;
   yes: boolean;
-  show: boolean;
 }
 
 export class CliArgError extends Error {}
@@ -34,14 +34,14 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
   ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
-  ${CLI_NAME} config                     交互式配置模型（首次使用推荐）
+  ${CLI_NAME} model                      显示当前模型配置
+  ${CLI_NAME} model <名称> --base-url <地址>  设置当前模型和 API 地址
 
 选项:
-  -m, --model <名>       指定模型名称，临时覆盖配置
   -x, --exec             开启命令执行和文件修改权限（逐次确认）
   -c, --continue         带上上一次对话的上下文继续提问
   -y, --yes              跳过确认，直接执行（用于 commit 子命令）
-      --show             显示当前模型配置（配合 config 子命令）
+      --base-url <地址>  设置模型使用的 OpenAI-compatible API 地址（配合 model 子命令）
       --no-stream        等待完整回答后一次性输出（Agent 工具循环本身使用完整响应）
   -h, --help             显示此帮助
   -v, --version          显示版本号
@@ -58,7 +58,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
   ${CLI_NAME} commit && ${CLI_NAME} commit -y
   ${CLI_NAME} review src/app/one-shot.ts
-  ${CLI_NAME} config
+  ${CLI_NAME} model deepseek-chat --base-url https://api.deepseek.com/v1
 `;
 
 export function parseCliArgs(argv: string[]): CliArgs {
@@ -69,7 +69,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
     exec: false,
     continueSession: false,
     yes: false,
-    show: false,
   };
 
   const promptParts: string[] = [];
@@ -95,13 +94,12 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--version":
         result.mode = "version";
         return result;
-      case "-m":
-      case "--model": {
+      case "--base-url": {
         const value = argv[++i];
         if (!value || value.startsWith("-")) {
-          throw new CliArgError("--model 需要一个模型名称参数");
+          throw new CliArgError("--base-url 需要一个 API 地址参数");
         }
-        result.model = value;
+        result.baseUrl = value;
         break;
       }
       case "--no-stream":
@@ -118,9 +116,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "-y":
       case "--yes":
         result.yes = true;
-        break;
-      case "--show":
-        result.show = true;
         break;
       default:
         if (arg.startsWith("-") && arg !== "-") {
@@ -141,5 +136,25 @@ export function parseCliArgs(argv: string[]): CliArgs {
   }
 
   result.prompt = promptParts.join(" ").trim();
+
+  if (result.subcommand === "model") {
+    if (promptParts.length > 1) {
+      throw new CliArgError("model 子命令最多接受一个模型名称");
+    }
+
+    result.modelName = promptParts[0]?.trim();
+    result.prompt = "";
+
+    if (result.modelName && !result.baseUrl) {
+      throw new CliArgError("设置模型时必须同时提供 --base-url <地址>");
+    }
+
+    if (!result.modelName && result.baseUrl) {
+      throw new CliArgError("设置 API 地址时必须同时提供模型名称");
+    }
+  } else if (result.baseUrl) {
+    throw new CliArgError("--base-url 只能配合 model 子命令使用");
+  }
+
   return result;
 }

@@ -1,6 +1,5 @@
 import {
   ChatMessage,
-  ChatGenerationOptions,
   OpenClawClient,
   ToolCall,
   ToolDefinition,
@@ -39,7 +38,7 @@ export class AgentActionDeniedError extends Error {
   }
 }
 
-export interface AgentRunOptions extends ChatGenerationOptions {
+export interface AgentRunOptions {
   allowActions?: boolean;
   rootDir?: string;
   confirmAction?: (request: AgentActionRequest) => Promise<boolean>;
@@ -129,9 +128,6 @@ export class AgentRuntime {
       ...normalizeHistory(history),
       { role: "user", content: question },
     ];
-    const clientOptions: ChatGenerationOptions = {
-      modelOverride: options.modelOverride,
-    };
     const rootDir = options.rootDir ?? process.cwd();
     let toolCallCount = 0;
 
@@ -139,7 +135,6 @@ export class AgentRuntime {
       const turn = await this.client.generateAgentTurn(
         messages,
         definitions,
-        clientOptions,
       );
 
       if (turn.toolCalls.length === 0) {
@@ -213,7 +208,6 @@ export class AgentRuntime {
         const finalTurn = await this.client.generateAgentTurn(
           messages,
           [],
-          clientOptions,
         );
         if (finalTurn.toolCalls.length > 0) {
           throw new Error("已达到 Agent 工具调用上限，但模型仍请求工具");

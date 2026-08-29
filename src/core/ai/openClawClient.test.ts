@@ -33,7 +33,7 @@ test("非流式 API 失败会抛出错误", async () => {
     const client = new OpenClawClient();
 
     await assert.rejects(
-      client.generateReply("hello", [], { modelOverride: "override-model" }),
+      client.generateReply("hello"),
       /API 请求失败: HTTP 401 Unauthorized: unauthorized/,
     );
   } finally {
@@ -78,7 +78,6 @@ test("流式响应已输出内容后不会重试请求", async () => {
       client.generateReplyStream(
         "hello",
         [],
-        {},
         (delta) => deltas.push(delta),
       ),
       /stream interrupted/,

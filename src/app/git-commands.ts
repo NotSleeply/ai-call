@@ -8,7 +8,6 @@
 import { spawn } from "child_process";
 import { AiCallAssistant } from "./assistant.js";
 import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
-import type { ChatGenerationOptions } from "../core/ai/openClawClient.js";
 import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
 
@@ -126,10 +125,6 @@ function stripCodeFence(text: string): string {
   return fence ? fence[1].trim() : trimmed;
 }
 
-function buildOptions(args: CliArgs): ChatGenerationOptions {
-  return { modelOverride: args.model };
-}
-
 export async function runCommit(args: CliArgs): Promise<number> {
   const diffResult = await getDiffForCommit();
 
@@ -170,7 +165,6 @@ export async function runCommit(args: CliArgs): Promise<number> {
       COMMIT_PROMPT,
       task,
       [],
-      buildOptions(args),
       (delta) => {
         if (spinner?.isSpinning) {
           spinner.stop();
@@ -261,7 +255,6 @@ export async function runReview(args: CliArgs): Promise<number> {
       REVIEW_PROMPT,
       task,
       [],
-      buildOptions(args),
       (delta) => {
         if (spinner?.isSpinning) {
           spinner.stop();

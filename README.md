@@ -33,7 +33,7 @@
 - 💬 `-c` 上下文延续，自动带上一次对话（SQLite 持久化）
 - 🐙 Git 快捷子命令：`aic commit`（生成提交信息并提交）、`aic review`（代码评审）
 - 🧠 单一 OpenAI-compatible API 配置，DeepSeek、OpenAI、OpenRouter 等统一接入
-- ⚙️ `aic config` 交互式配置向导，首次使用零门槛
+- ⚙️ `aic model` 配置当前模型与 API 地址，始终只保留一组配置
 
 ---
 
@@ -55,18 +55,20 @@ npm link
 
 ## 配置
 
-**首次使用推荐直接运行配置向导**：
+**首次使用或切换模型**：
 
 ```bash
-aic config
+aic model deepseek-chat --base-url https://api.deepseek.com/v1
 ```
 
-向导会引导你填写 API Key、API 地址和模型名，保存后可选立即测试连接。`aic config --show` 可随时查看当前配置（密钥脱敏显示）。
+命令会在交互终端中提示输入 API Key，输入内容不会回显，并保存到用户级 `~/.ai-call/.env`。已有 Key 时直接回车即可保留；不要把 Key 写进命令行参数。`aic model` 可查看当前模型、API 地址和脱敏后的 Key。
 
-只支持 OpenAI-compatible Chat Completions API。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
+只支持 OpenAI-compatible Chat Completions API。模型名称不能用来自动推断 API 地址，因此切换服务时必须明确提供 `--base-url`。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
 
 1. 当前目录的 `.env`
 2. 用户级 `~/.ai-call/.env`（任意目录可用 `aic`）
+
+在管道或 CI 等非交互环境中，API Key 请通过环境变量 `AIC_API_KEY` 或配置文件提供。
 
 可复制 `.env.example` 起步：
 
@@ -132,10 +134,10 @@ aic review src/app      # 只评审指定路径
 
 | 参数 | 说明 |
 | --- | --- |
-| `-m, --model <名>` | 临时覆盖配置中的模型名 |
 | `-x, --exec` | 开启命令执行与文件修改权限，逐次确认 |
 | `-c, --continue` | 带上一次对话的上下文 |
 | `-y, --yes` | 跳过确认直接执行（commit 子命令） |
+| `--base-url <地址>` | 设置模型配置中的 OpenAI-compatible API 地址（model 子命令） |
 | `--no-stream` | 使用完整响应输出（Agent 工具循环默认使用完整响应） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
@@ -156,7 +158,7 @@ ai-call/
 │       ├── args.ts                 # 参数解析与帮助文本
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
 │       ├── git-commands.ts         # commit / review 子命令
-│       ├── config.ts               # aic config 配置向导
+│       ├── model.ts                # aic model 模型配置
 │       ├── tty.ts                  # 终端确认输入与转圈提示
 │       └── assistant.ts            # 助手门面
 ├── src/core/
@@ -202,7 +204,7 @@ A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/st
 A: 确认已执行 `pnpm install`、`pnpm run build`、`npm link`。
 
 **Q: 提示 API 401 / 找不到 Key？**
-A: 检查 `.env` 或 `~/.ai-call/.env` 是否配置了 `AIC_API_KEY`、`AIC_BASE_URL` 和 `AIC_MODEL`，也可以运行 `aic config --show` 查看脱敏后的配置。
+A: 检查 `.env` 或 `~/.ai-call/.env` 是否配置了 `AIC_API_KEY`、`AIC_BASE_URL` 和 `AIC_MODEL`，也可以运行 `aic model` 查看脱敏后的当前配置。
 
 **Q: `aic` 在非项目目录用不了模型？**
 A: 把密钥配置放到用户级 `~/.ai-call/.env` 即可在任意目录使用。
