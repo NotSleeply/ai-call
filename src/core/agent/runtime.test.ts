@@ -9,14 +9,17 @@ import { AgentRuntime } from "./runtime.js";
 
 class FakeClient {
   readonly calls: Array<{ tools: ToolDefinition[] }> = [];
+  readonly signals: Array<AbortSignal | undefined> = [];
 
   constructor(private readonly turns: ChatTurn[]) {}
 
   async generateAgentTurn(
     _messages: unknown[],
     tools: ToolDefinition[],
+    options?: { signal?: AbortSignal },
   ): Promise<ChatTurn> {
     this.calls.push({ tools });
+    this.signals.push(options?.signal);
     const turn = this.turns.shift();
     if (!turn) throw new Error("fake client 没有更多响应");
     return turn;
@@ -78,4 +81,14 @@ test("模型请求执行工具时不会执行本地操作", async () => {
 
   assert.equal(await runtime.run("执行命令"), "未执行任何命令");
   assert.equal(client.calls.length, 2);
+});
+
+test("Agent 将取消信号传递给模型请求", async () => {
+  const controller = new AbortController();
+  const client = new FakeClient([{ content: "已完成", toolCalls: [] }]);
+  const runtime = new AgentRuntime(client as unknown as OpenClawClient);
+
+  await runtime.run("检查项目", [], { signal: controller.signal });
+
+  assert.equal(client.signals[0], controller.signal);
 });

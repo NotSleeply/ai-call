@@ -42,6 +42,109 @@ export const TERMINAL_OUTPUT_RULES = `终端输出格式：
 5. 文件内容、代码和命令中的符号必须原样保留；这些符号不是排版标记。
 6. 不要模仿历史消息中的 Markdown 格式。`;
 
+export const REQUEST_TIMEOUT_MS = 30_000;
+export const STREAM_IDLE_TIMEOUT_MS = 30_000;
+
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
+
+export class RequestTimeoutError extends Error {
+  readonly code = "REQUEST_TIMEOUT";
+
+  constructor() {
+    super(
+      `API 请求超时：${REQUEST_TIMEOUT_MS / 1000} 秒内未收到响应或新的流式内容`,
+    );
+    this.name = "RequestTimeoutError";
+  }
+}
+
+export class RequestCancelledError extends Error {
+  readonly code = "REQUEST_CANCELLED";
+
+  constructor() {
+    super("API 请求已中断");
+    this.name = "RequestCancelledError";
+  }
+}
+
+interface RequestControl {
+  signal: AbortSignal;
+  readonly timedOut: boolean;
+  startIdleTimeout(): void;
+  noteActivity(): void;
+  dispose(): void;
+}
+
+function createRequestControl(parentSignal?: AbortSignal): RequestControl {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+
+  const clearTimer = () => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+  };
+
+  const armTimer = (timeoutMs: number) => {
+    clearTimer();
+    timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+  };
+
+  const onParentAbort = () => {
+    controller.abort(parentSignal?.reason);
+  };
+
+  if (parentSignal?.aborted) {
+    controller.abort(parentSignal.reason);
+  } else {
+    armTimer(REQUEST_TIMEOUT_MS);
+    parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+  }
+
+  return {
+    signal: controller.signal,
+    get timedOut() {
+      return timedOut;
+    },
+    startIdleTimeout() {
+      if (!controller.signal.aborted) {
+        armTimer(STREAM_IDLE_TIMEOUT_MS);
+      }
+    },
+    noteActivity() {
+      if (!controller.signal.aborted) {
+        armTimer(STREAM_IDLE_TIMEOUT_MS);
+      }
+    },
+    dispose() {
+      clearTimer();
+      parentSignal?.removeEventListener("abort", onParentAbort);
+    },
+  };
+}
+
+function normalizeRequestError(
+  error: unknown,
+  request: RequestControl,
+): Error {
+  if (request.timedOut) {
+    return new RequestTimeoutError();
+  }
+
+  if (request.signal.aborted) {
+    return new RequestCancelledError();
+  }
+
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 interface ChatCompletionsResponse {
   choices?: Array<{
     message?: {
@@ -184,60 +287,70 @@ export class OpenClawClient {
   private async requestChat(
     messages: ChatMessage[],
     tools: ToolDefinition[] = [],
+    options: RequestOptions = {},
   ): Promise<ChatTurn> {
     this.assertConfigured();
+    const request = createRequestControl(options.signal);
 
-    const body: Record<string, unknown> = {
-      model: this.model,
-      messages,
-      temperature: 0.7,
-    };
+    try {
+      const body: Record<string, unknown> = {
+        model: this.model,
+        messages,
+        temperature: 0.7,
+      };
 
-    if (tools.length > 0) {
-      body.tools = tools;
-      body.tool_choice = "auto";
+      if (tools.length > 0) {
+        body.tools = tools;
+        body.tool_choice = "auto";
+      }
+
+      const response = await fetch(this.resolveEndpoint(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: request.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = (await response.text()).slice(0, 4000);
+        throw new Error(
+          `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as ChatCompletionsResponse;
+      const message = data.choices?.[0]?.message;
+
+      if (!message) {
+        const responseError =
+          typeof data.error === "string"
+            ? data.error
+            : data.error?.message || "API 返回了空消息";
+        throw new Error(responseError);
+      }
+
+      const content = normalizeContent(message.content);
+      const toolCalls = normalizeToolCalls(message.tool_calls);
+
+      if (!content && toolCalls.length === 0) {
+        throw new Error("API 返回了空消息");
+      }
+
+      return { content, toolCalls };
+    } catch (error) {
+      throw normalizeRequestError(error, request);
+    } finally {
+      request.dispose();
     }
-
-    const response = await fetch(this.resolveEndpoint(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = (await response.text()).slice(0, 4000);
-      throw new Error(
-        `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
-      );
-    }
-
-    const data = (await response.json()) as ChatCompletionsResponse;
-    const message = data.choices?.[0]?.message;
-
-    if (!message) {
-      const responseError =
-        typeof data.error === "string"
-          ? data.error
-          : data.error?.message || "API 返回了空消息";
-      throw new Error(responseError);
-    }
-
-    const content = normalizeContent(message.content);
-    const toolCalls = normalizeToolCalls(message.tool_calls);
-
-    if (!content && toolCalls.length === 0) {
-      throw new Error("API 返回了空消息");
-    }
-
-    return { content, toolCalls };
   }
 
   private async readResponseLines(
     response: Response,
     onLine: (line: string) => void,
+    onActivity: () => void,
   ): Promise<void> {
     if (!response.body) {
       throw new Error("响应体为空，无法读取流式内容");
@@ -251,6 +364,7 @@ export class OpenClawClient {
       const { done, value } = await reader.read();
       if (done) break;
 
+      onActivity();
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split(/\r?\n/);
       buffer = lines.pop() ?? "";
@@ -269,74 +383,90 @@ export class OpenClawClient {
   private async requestChatStream(
     messages: ChatMessage[],
     onDelta: (delta: string) => void,
+    options: RequestOptions = {},
   ): Promise<string> {
     this.assertConfigured();
+    const request = createRequestControl(options.signal);
 
-    const response = await fetch(this.resolveEndpoint(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages,
-        temperature: 0.7,
-        stream: true,
-      }),
-    });
+    try {
+      const response = await fetch(this.resolveEndpoint(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages,
+          temperature: 0.7,
+          stream: true,
+        }),
+        signal: request.signal,
+      });
 
-    if (!response.ok) {
-      const errorText = (await response.text()).slice(0, 4000);
-      throw new Error(
-        `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
-      );
-    }
-
-    let fullText = "";
-
-    await this.readResponseLines(response, (line) => {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) return;
-
-      const payload = trimmed.slice(5).trim();
-      if (!payload || payload === "[DONE]") return;
-
-      try {
-        const data = JSON.parse(payload) as {
-          choices?: Array<{ delta?: { content?: unknown } }>;
-        };
-        const delta = normalizeContent(data.choices?.[0]?.delta?.content);
-
-        if (delta) {
-          fullText += delta;
-          onDelta(delta);
-        }
-      } catch {
-        // 忽略无法解析的流式数据块，最终没有内容时会报错。
+      if (!response.ok) {
+        const errorText = (await response.text()).slice(0, 4000);
+        throw new Error(
+          `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
+        );
       }
-    });
 
-    if (fullText) {
-      return fullText.trim();
+      let fullText = "";
+
+      request.startIdleTimeout();
+      await this.readResponseLines(
+        response,
+        (line) => {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) return;
+
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") return;
+
+          try {
+            const data = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: unknown } }>;
+            };
+            const delta = normalizeContent(data.choices?.[0]?.delta?.content);
+
+            if (delta) {
+              fullText += delta;
+              onDelta(delta);
+            }
+          } catch {
+            // 忽略无法解析的流式数据块，最终没有内容时会报错。
+          }
+        },
+        () => request.noteActivity(),
+      );
+
+      if (fullText) {
+        return fullText.trim();
+      }
+
+      request.dispose();
+      const fallback = await this.requestChat(messages, [], options);
+      if (fallback.toolCalls.length > 0) {
+        throw new Error("普通流式请求收到了未请求的工具调用");
+      }
+
+      if (fallback.content) {
+        onDelta(fallback.content);
+      }
+
+      return fallback.content;
+    } catch (error) {
+      throw normalizeRequestError(error, request);
+    } finally {
+      request.dispose();
     }
-
-    const fallback = await this.requestChat(messages, []);
-    if (fallback.toolCalls.length > 0) {
-      throw new Error("普通流式请求收到了未请求的工具调用");
-    }
-
-    if (fallback.content) {
-      onDelta(fallback.content);
-    }
-
-    return fallback.content;
   }
 
   async generateReplyStream(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
     onDelta: (delta: string) => void = () => {},
+    options: RequestOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -347,12 +477,14 @@ export class OpenClawClient {
     return this.requestChatStream(
       this.buildMessages(DEFAULT_SYSTEM_PROMPT, question, conversationHistory),
       onDelta,
+      options,
     );
   }
 
   async generateReply(
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: RequestOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -363,6 +495,7 @@ export class OpenClawClient {
     const turn = await this.requestChat(
       this.buildMessages(DEFAULT_SYSTEM_PROMPT, question, conversationHistory),
       [],
+      options,
     );
 
     if (turn.toolCalls.length > 0) {
@@ -376,6 +509,7 @@ export class OpenClawClient {
     systemPrompt: string,
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
+    options: RequestOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -390,6 +524,7 @@ export class OpenClawClient {
         conversationHistory,
       ),
       [],
+      options,
     );
 
     if (turn.toolCalls.length > 0) {
@@ -404,6 +539,7 @@ export class OpenClawClient {
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }> = [],
     onDelta: (delta: string) => void = () => {},
+    options: RequestOptions = {},
   ): Promise<string> {
     const question = userInput.trim();
 
@@ -418,13 +554,15 @@ export class OpenClawClient {
         conversationHistory,
       ),
       onDelta,
+      options,
     );
   }
 
   async generateAgentTurn(
     messages: ChatMessage[],
     tools: ToolDefinition[] = [],
+    options: RequestOptions = {},
   ): Promise<ChatTurn> {
-    return this.requestChat(messages, tools);
+    return this.requestChat(messages, tools, options);
   }
 }

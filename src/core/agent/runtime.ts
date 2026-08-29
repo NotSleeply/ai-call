@@ -30,6 +30,7 @@ ${TERMINAL_OUTPUT_RULES}`;
 
 export interface AgentRunOptions {
   rootDir?: string;
+  signal?: AbortSignal;
 }
 
 function normalizeHistory(
@@ -117,6 +118,7 @@ export class AgentRuntime {
       const turn = await this.client.generateAgentTurn(
         messages,
         definitions,
+        { signal: options.signal },
       );
 
       if (turn.toolCalls.length === 0) {
@@ -168,6 +170,7 @@ export class AgentRuntime {
         const finalTurn = await this.client.generateAgentTurn(
           messages,
           [],
+          { signal: options.signal },
         );
         if (finalTurn.toolCalls.length > 0) {
           throw new Error("已达到 Agent 工具调用上限，但模型仍请求工具");

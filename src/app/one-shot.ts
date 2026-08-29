@@ -11,6 +11,7 @@ import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
 import { AgentRuntime } from "../core/agent/runtime.js";
 import { normalizeTerminalText } from "./terminal-output.js";
+import { RequestCancelledError } from "../core/ai/openClawClient.js";
 
 export const HISTORY_MESSAGE_LIMIT = 12;
 
@@ -111,10 +112,23 @@ export async function runOneShot(args: CliArgs): Promise<number> {
   }
 
   const spinner = startSpinner("思考中...");
+  const controller = new AbortController();
+  let interrupted = false;
+  const onSigint = () => {
+    interrupted = true;
+    controller.abort();
+  };
+  process.once("SIGINT", onSigint);
 
   try {
     const runtime = new AgentRuntime();
-    const answer = normalizeTerminalText(await runtime.run(question, history));
+    const rawAnswer = await runtime.run(question, history, {
+      signal: controller.signal,
+    });
+    if (interrupted) {
+      throw new RequestCancelledError();
+    }
+    const answer = normalizeTerminalText(rawAnswer);
 
     spinner?.stop();
     if (answer) {
@@ -129,8 +143,14 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     return 0;
   } catch (error) {
     spinner?.stop();
+    if (interrupted || error instanceof RequestCancelledError) {
+      process.stderr.write(`\n${CLI_NAME}: 请求已中断\n`);
+      return 130;
+    }
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;
+  } finally {
+    process.off("SIGINT", onSigint);
   }
 }
