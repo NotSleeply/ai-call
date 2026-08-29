@@ -10,6 +10,7 @@ import { CLI_NAME } from "./args.js";
 import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
 import { AgentRuntime } from "../core/agent/runtime.js";
+import { normalizeTerminalText } from "./terminal-output.js";
 
 async function readStdinIfPiped(): Promise<string> {
   if (process.stdin.isTTY) {
@@ -110,7 +111,7 @@ export async function runOneShot(args: CliArgs): Promise<number> {
 
   try {
     const runtime = new AgentRuntime();
-    const answer = await runtime.run(question, history);
+    const answer = normalizeTerminalText(await runtime.run(question, history));
 
     spinner?.stop();
     if (answer) {

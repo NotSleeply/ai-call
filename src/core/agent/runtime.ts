@@ -3,6 +3,7 @@ import {
   OpenClawClient,
   ToolCall,
   ToolDefinition,
+  TERMINAL_OUTPUT_RULES,
 } from "../ai/openClawClient.js";
 import {
   executeReadOnlyTool,
@@ -23,7 +24,9 @@ const AGENT_SYSTEM_PROMPT = `你是一个轻量、可靠、安全的终端 AI �
 5. 本次任务最多调用 3 次工具。达到上限后只能根据已有结果给出最终总结，不能继续调用工具。
 6. 如果用户要求执行命令或修改文件，只能给出建议命令、补丁或操作步骤，不能实际执行，也不能声称已经完成。
 7. 不要声称完成了没有通过工具完成的操作；文件不存在时要如实说明。
-8. 最终回答简洁，说明实际观察到的结果和仍未完成的事项。`;
+8. 最终回答简洁，说明实际观察到的结果和仍未完成的事项。
+
+${TERMINAL_OUTPUT_RULES}`;
 
 export interface AgentRunOptions {
   rootDir?: string;
