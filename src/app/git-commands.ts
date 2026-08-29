@@ -1,13 +1,13 @@
 /**
- * AI Call - Git 快捷子命令（commit / review）
+ * AI Call - Git 只读子命令（commit / review）
  *
  * 职责：
- * - aic commit: 读取 git 改动生成提交信息，确认后执行 git commit
+ * - aic commit: 读取 git 改动并生成提交信息，不执行 git commit
  * - aic review: 对未提交改动进行代码评审
  */
 import { spawn } from "child_process";
 import { AiCallAssistant } from "./assistant.js";
-import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
+import { startSpinner } from "./tty.js";
 import { CLI_NAME } from "./args.js";
 import type { CliArgs } from "./args.js";
 
@@ -63,24 +63,10 @@ function execGit(args: string[]): Promise<ExecGitResult> {
   });
 }
 
-function waitChildExit(
-  child: ReturnType<typeof spawn>,
-): Promise<number> {
-  return new Promise((resolve) => {
-    child.on("error", (error) => {
-      process.stderr.write(`${CLI_NAME}: 执行失败: ${error.message}\n`);
-      resolve(1);
-    });
-    child.on("close", (code) => {
-      resolve(code ?? 1);
-    });
-  });
-}
-
 type DiffResult =
   | { kind: "error"; message: string }
   | { kind: "empty" }
-  | { kind: "diff"; stat: string; diff: string; staged: boolean };
+  | { kind: "diff"; stat: string; diff: string };
 
 async function getDiffForCommit(): Promise<DiffResult> {
   const staged = await execGit(["diff", "--cached"]);
@@ -91,7 +77,6 @@ async function getDiffForCommit(): Promise<DiffResult> {
       kind: "diff",
       stat: stat.stdout,
       diff: staged.stdout,
-      staged: true,
     };
   }
 
@@ -107,7 +92,7 @@ async function getDiffForCommit(): Promise<DiffResult> {
   }
 
   const stat = await execGit(["diff", "HEAD", "--stat"]);
-  return { kind: "diff", stat: stat.stdout, diff: head.stdout, staged: false };
+  return { kind: "diff", stat: stat.stdout, diff: head.stdout };
 }
 
 function buildDiffTask(stat: string, diff: string): string {
@@ -134,9 +119,9 @@ export async function runCommit(args: CliArgs): Promise<number> {
   }
 
   if (diffResult.kind === "empty") {
-    const status = await execGit(["status", "--porcelain"]);
-    const untrackedCount = status.ok
-      ? status.stdout.split(/\r?\n/).filter((line) => line.startsWith("??"))
+    const untracked = await execGit(["ls-files", "--others", "--exclude-standard"]);
+    const untrackedCount = untracked.ok
+      ? untracked.stdout.split(/\r?\n/).filter((line) => line.trim())
           .length
       : 0;
 
@@ -161,16 +146,10 @@ export async function runCommit(args: CliArgs): Promise<number> {
   let message: string;
 
   try {
-    message = await assistant.runSkillTaskStream(
+    message = await assistant.runSkillTask(
       COMMIT_PROMPT,
       task,
       [],
-      (delta) => {
-        if (spinner?.isSpinning) {
-          spinner.stop();
-        }
-        process.stdout.write(delta);
-      },
     );
   } catch (error) {
     spinner?.stop();
@@ -179,6 +158,7 @@ export async function runCommit(args: CliArgs): Promise<number> {
     return 1;
   }
 
+  spinner?.stop();
   message = stripCodeFence(message).trim();
 
   if (!message) {
@@ -187,34 +167,12 @@ export async function runCommit(args: CliArgs): Promise<number> {
   }
 
   if (!message.endsWith("\n")) {
+    process.stdout.write(message);
     process.stdout.write("\n");
+  } else {
+    process.stdout.write(message);
   }
-
-  if (!args.yes) {
-    const answer = await askConfirmation("使用该信息提交? [y/N]: ");
-
-    if (answer === "") {
-      process.stderr.write(`${CLI_NAME}: 无法读取确认输入，未提交\n`);
-      return 2;
-    }
-
-    if (!isConfirmYes(answer)) {
-      process.stderr.write(`${CLI_NAME}: 已取消，未提交\n`);
-      return 0;
-    }
-  }
-
-  // 有暂存改动时只提交暂存内容；否则自动暂存已跟踪文件的修改（不含未跟踪文件）
-  const commitArgs = diffResult.staged
-    ? ["commit", "-m", message]
-    : ["commit", "-am", message];
-
-  const child = spawn("git", commitArgs, {
-    stdio: "inherit",
-    windowsHide: true,
-  });
-
-  return waitChildExit(child);
+  return 0;
 }
 
 export async function runReview(args: CliArgs): Promise<number> {

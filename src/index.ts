@@ -2,7 +2,7 @@
 /**
  * AI Call - 应用入口
  *
- * 职责：解析命令行参数，分发到一次性 Agent 调用或子命令
+ * 职责：解析命令行参数，分发到一次性只读问答或子命令
  */
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";

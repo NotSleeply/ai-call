@@ -5,7 +5,7 @@ import type {
   OpenClawClient,
   ToolDefinition,
 } from "../ai/openClawClient.js";
-import { AgentActionDeniedError, AgentRuntime } from "./runtime.js";
+import { AgentRuntime } from "./runtime.js";
 
 class FakeClient {
   readonly calls: Array<{ tools: ToolDefinition[] }> = [];
@@ -54,58 +54,28 @@ test("Agent 串行调用工具，并在第三次后强制最终总结", async ()
   assert.equal(client.calls[3].tools.length, 0);
 });
 
-test("只读模式不会执行动作工具，并且动作需要确认", async () => {
+test("Agent 始终只暴露只读工具", async () => {
   const client = new FakeClient([
-    toolCall("run_command", { command: "node" }, "1"),
-    { content: "没有执行", toolCalls: [] },
-  ]);
-  let confirmationCount = 0;
-  const runtime = new AgentRuntime(client as unknown as OpenClawClient);
-  const answer = await runtime.run("执行命令", [], {
-    allowActions: false,
-    confirmAction: async () => {
-      confirmationCount++;
-      return true;
-    },
-  });
-
-  assert.equal(answer, "没有执行");
-  assert.equal(confirmationCount, 0);
-});
-
-test("确认输入异常不会被 Agent 吞掉", async () => {
-  const client = new FakeClient([
-    toolCall("run_command", { command: "node" }, "1"),
+    toolCall("find_files", { pattern: "*.ts" }, "1"),
+    { content: "已完成只读检查", toolCalls: [] },
   ]);
   const runtime = new AgentRuntime(client as unknown as OpenClawClient);
+  const answer = await runtime.run("检查项目", [], { rootDir: process.cwd() });
 
-  await assert.rejects(
-    runtime.run("执行命令", [], {
-      allowActions: true,
-      confirmAction: async () => {
-        throw new Error("确认输入不可用");
-      },
-    }),
-    /确认输入不可用/,
+  assert.equal(answer, "已完成只读检查");
+  assert.deepEqual(
+    client.calls[0].tools.map((tool) => tool.function.name),
+    ["find_files", "read_file", "search_text"],
   );
 });
 
-test("用户拒绝动作后立即终止 Agent", async () => {
+test("模型请求执行工具时不会执行本地操作", async () => {
   const client = new FakeClient([
     toolCall("run_command", { command: "node" }, "1"),
-    { content: "不应该继续请求模型", toolCalls: [] },
+    { content: "未执行任何命令", toolCalls: [] },
   ]);
   const runtime = new AgentRuntime(client as unknown as OpenClawClient);
 
-  await assert.rejects(
-    runtime.run("执行命令", [], {
-      allowActions: true,
-      confirmAction: async () => false,
-    }),
-    (error: unknown) =>
-      error instanceof AgentActionDeniedError &&
-      error.message === "用户拒绝了此次操作",
-  );
-
-  assert.equal(client.calls.length, 1);
+  assert.equal(await runtime.run("执行命令"), "未执行任何命令");
+  assert.equal(client.calls.length, 2);
 });

@@ -16,10 +16,8 @@ export interface CliArgs {
   modelName?: string;
   baseUrl?: string;
   stream: boolean;
-  exec: boolean;
   continueSession: boolean;
   subcommand?: SubcommandName;
-  yes: boolean;
 }
 
 export class CliArgError extends Error {}
@@ -30,19 +28,16 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} [选项] <问题>              提问并输出回答
   echo <内容> | ${CLI_NAME} <问题>       管道内容作为上下文再提问
   echo <内容> | ${CLI_NAME}              直接处理管道内容
-  ${CLI_NAME} -x <任务>                  开启命令执行和文件修改权限
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
-  ${CLI_NAME} commit [额外要求]          读取 git 改动生成提交信息，确认后执行 git commit
+  ${CLI_NAME} commit [额外要求]          读取 git 改动并生成提交信息
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
   ${CLI_NAME} model                      显示当前模型配置
   ${CLI_NAME} model <名称> --base-url <地址>  设置当前模型和 API 地址
 
 选项:
-  -x, --exec             开启命令执行和文件修改权限（逐次确认）
   -c, --continue         带上上一次对话的上下文继续提问
-  -y, --yes              跳过确认，直接执行（用于 commit 子命令）
       --base-url <地址>  设置模型使用的 OpenAI-compatible API 地址（配合 model 子命令）
-      --no-stream        等待完整回答后一次性输出（Agent 工具循环本身使用完整响应）
+      --no-stream        等待完整回答后一次性输出（本地查询循环使用完整响应）
   -h, --help             显示此帮助
   -v, --version          显示版本号
 
@@ -54,9 +49,8 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} "tar 解压 tar.gz 的命令是什么"
   git diff | ${CLI_NAME} "生成一行符合规范的 commit message"
   cat error.log | ${CLI_NAME} "总结最核心的报错原因"
-  ${CLI_NAME} -x "找出占用 8080 端口的进程并杀掉"
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
-  ${CLI_NAME} commit && ${CLI_NAME} commit -y
+  ${CLI_NAME} commit
   ${CLI_NAME} review src/app/one-shot.ts
   ${CLI_NAME} model deepseek-chat --base-url https://api.deepseek.com/v1
 `;
@@ -66,9 +60,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     mode: "one-shot",
     prompt: "",
     stream: true,
-    exec: false,
     continueSession: false,
-    yes: false,
   };
 
   const promptParts: string[] = [];
@@ -105,17 +97,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--no-stream":
         result.stream = false;
         break;
-      case "-x":
-      case "--exec":
-        result.exec = true;
-        break;
       case "-c":
       case "--continue":
         result.continueSession = true;
-        break;
-      case "-y":
-      case "--yes":
-        result.yes = true;
         break;
       default:
         if (arg.startsWith("-") && arg !== "-") {

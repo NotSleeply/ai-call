@@ -24,11 +24,13 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.baseUrl, undefined);
 });
 
-test("临时模型和 config 显示参数已移除", () => {
+test("执行权限、临时模型和旧配置显示参数已移除", () => {
   assert.throws(
     () => parseCliArgs(["-m", "gpt-5-mini", "hello"]),
     CliArgError,
   );
+  assert.throws(() => parseCliArgs(["-x", "hello"]), CliArgError);
+  assert.throws(() => parseCliArgs(["--yes"]), CliArgError);
   assert.throws(() => parseCliArgs(["--show"]), CliArgError);
   assert.throws(
     () => parseCliArgs(["model", "deepseek-chat"]),

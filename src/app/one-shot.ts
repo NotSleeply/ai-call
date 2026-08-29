@@ -1,19 +1,15 @@
 /**
- * AI Call - 一次性执行模式
+ * AI Call - 一次性问答模式
  *
  * 职责：
  * - 检测 stdin 管道，与命令行 prompt 合并
- * - 通过统一 Agent Runtime 输出回答到 stdout，错误与提示到 stderr
+ * - 通过统一只读查询 Runtime 输出回答到 stdout，错误与提示到 stderr
  * - 尽力持久化对话（数据库不可用时不影响主流程）
  */
 import { CLI_NAME } from "./args.js";
-import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
+import { startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
-import {
-  AgentActionDeniedError,
-  AgentRuntime,
-  type AgentActionRequest,
-} from "../core/agent/runtime.js";
+import { AgentRuntime } from "../core/agent/runtime.js";
 
 async function readStdinIfPiped(): Promise<string> {
   if (process.stdin.isTTY) {
@@ -92,40 +88,6 @@ export async function buildQuestion(
 
 export { readStdinIfPiped };
 
-class ConfirmationUnavailableError extends Error {}
-
-function actionConfirmationText(request: AgentActionRequest): string {
-  if (request.name === "run_command") {
-    const input = request.arguments;
-    if (typeof input === "object" && input !== null && !Array.isArray(input)) {
-      const command = (input as Record<string, unknown>).command;
-      const args = (input as Record<string, unknown>).args;
-      if (typeof command === "string" && Array.isArray(args)) {
-        return `准备执行命令: ${JSON.stringify([command, ...args])}`;
-      }
-      if (typeof command === "string") {
-        return `准备执行命令: ${command}`;
-      }
-    }
-    return "准备执行一个本地命令";
-  }
-
-  if (request.name === "edit_file") {
-    const input = request.arguments;
-    if (typeof input === "object" && input !== null && !Array.isArray(input)) {
-      const path = (input as Record<string, unknown>).path;
-      const patch = (input as Record<string, unknown>).patch;
-      if (typeof path === "string") {
-        const size = typeof patch === "string" ? patch.length : 0;
-        return `准备修改文件 ${path}（补丁 ${size} 字符）`;
-      }
-    }
-    return "准备修改一个项目文件";
-  }
-
-  return `准备调用工具 ${request.name}`;
-}
-
 export async function runOneShot(args: CliArgs): Promise<number> {
   const stdinText = await readStdinIfPiped();
   const question = (await buildQuestion(args.prompt, stdinText)).trim();
@@ -148,21 +110,7 @@ export async function runOneShot(args: CliArgs): Promise<number> {
 
   try {
     const runtime = new AgentRuntime();
-    const answer = await runtime.run(question, history, {
-      allowActions: args.exec,
-      confirmAction: async (request) => {
-        spinner?.stop();
-        const answer = await askConfirmation(
-          `${actionConfirmationText(request)}\n确认执行? [y/N]: `,
-        );
-
-        if (!answer) {
-          throw new ConfirmationUnavailableError("无法读取确认输入");
-        }
-
-        return isConfirmYes(answer);
-      },
-    });
+    const answer = await runtime.run(question, history);
 
     spinner?.stop();
     if (answer) {
@@ -177,14 +125,6 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     return 0;
   } catch (error) {
     spinner?.stop();
-    if (error instanceof ConfirmationUnavailableError) {
-      process.stderr.write(`${CLI_NAME}: 无法读取确认输入，已取消操作\n`);
-      return 2;
-    }
-    if (error instanceof AgentActionDeniedError) {
-      process.stderr.write(`${CLI_NAME}: 用户拒绝了操作，已取消本次任务\n`);
-      return 0;
-    }
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);
     return 1;

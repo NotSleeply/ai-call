@@ -1,12 +1,10 @@
 /**
- * AI Call - 终端确认输入
+ * AI Call - 终端交互辅助
  *
  * 职责：
- * - stdin 是 TTY 时用 readline 询问确认
- * - stdin 被管道占用时从控制台（Windows CONIN$ / POSIX /dev/tty）读取
+ * - 仅在交互终端中安全读取 API Key
+ * - 在交互终端中显示等待提示
  */
-import { createInterface } from "readline";
-import { openSync, closeSync, readSync } from "fs";
 import yoctoSpinner from "yocto-spinner";
 
 export type SpinnerInstance = ReturnType<typeof yoctoSpinner>;
@@ -28,64 +26,6 @@ export function startSpinner(text: string): SpinnerInstance | null {
     return null;
   }
   return yoctoSpinner({ text }).start();
-}
-
-/**
- * 从控制台直接读取一行（stdin 被管道占用时使用）。
- * Windows 读 CONIN$，POSIX 读 /dev/tty；失败时返回空串。
- */
-export function readTtyLineSync(): string {
-  const ttyPath = process.platform === "win32" ? "CONIN$" : "/dev/tty";
-
-  try {
-    const fd = openSync(ttyPath, "r");
-    const buf = Buffer.alloc(1);
-    let line = "";
-
-    while (true) {
-      const n = readSync(fd, buf, 0, 1, null);
-      if (n === 0) {
-        continue;
-      }
-
-      const ch = String.fromCharCode(buf[0]);
-      if (ch === "\n" || ch === "\r") {
-        break;
-      }
-      line += ch;
-    }
-
-    closeSync(fd);
-    return line.trim();
-  } catch {
-    return "";
-  }
-}
-
-/**
- * 向用户询问确认，返回原始回答。
- * 无法读取（如无控制台）时返回空串。
- */
-export async function askConfirmation(prompt: string): Promise<string> {
-  if (process.stdin.isTTY === true) {
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stderr,
-    });
-
-    try {
-      return await new Promise<string>((resolve) => {
-        rl.question(prompt, (answer) => {
-          resolve(answer.trim());
-        });
-      });
-    } finally {
-      rl.close();
-    }
-  }
-
-  process.stderr.write(prompt);
-  return readTtyLineSync();
 }
 
 /**
@@ -146,8 +86,4 @@ export async function askSecret(prompt: string): Promise<string> {
 
     stdin.on("data", onData);
   });
-}
-
-export function isConfirmYes(answer: string): boolean {
-  return /^(y|yes|是|执行|提交)$/i.test(answer);
 }
