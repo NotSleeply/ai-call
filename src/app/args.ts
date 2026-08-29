@@ -4,9 +4,9 @@
  * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
-export type SubcommandName = "commit" | "review" | "model";
+export type SubcommandName = "review" | "model";
 
-export const SUBCOMMANDS: SubcommandName[] = ["commit", "review", "model"];
+export const SUBCOMMANDS: SubcommandName[] = ["review", "model"];
 
 export const CLI_NAME = "aic";
 
@@ -29,7 +29,6 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   echo <内容> | ${CLI_NAME} <问题>       管道内容作为上下文再提问
   echo <内容> | ${CLI_NAME}              直接处理管道内容
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
-  ${CLI_NAME} commit [额外要求]          读取 git 改动并生成提交信息
   ${CLI_NAME} review [路径...]           对未提交改动进行代码评审
   ${CLI_NAME} model                      显示当前模型配置
   ${CLI_NAME} model <名称> --base-url <地址>  设置当前模型和 API 地址
@@ -50,7 +49,6 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   git diff | ${CLI_NAME} "生成一行符合规范的 commit message"
   cat error.log | ${CLI_NAME} "总结最核心的报错原因"
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
-  ${CLI_NAME} commit
   ${CLI_NAME} review src/app/one-shot.ts
   ${CLI_NAME} model deepseek-chat --base-url https://api.deepseek.com/v1
 `;

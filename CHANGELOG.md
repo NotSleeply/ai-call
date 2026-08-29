@@ -6,11 +6,12 @@
 
 ### Added
 
-- `aic config` 交互式模型配置向导：选提供方、填 Key、保存后可立即测试连接；`aic config --show` 查看配置（密钥脱敏）
+- `aic model` 配置当前模型与 OpenAI-compatible API 地址，始终只保留一组配置
 
 ### Removed
 
 - 移除旧版交互式 REPL（`aic -i`）及相关文件服务、多 Agent 模块，工具回归纯单次调用形态
+- 移除 `aic commit` 专用命令；生成提交信息请通过 `git diff | aic "..."` 使用通用管道能力
 
 ## [1.0.0] - 2026-08-28
 

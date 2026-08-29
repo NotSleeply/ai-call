@@ -31,7 +31,7 @@
 - 🔗 管道友好：stdin 内容与提问合并，回答纯净可继续管道
 - 🔒 只读访问本地项目，命令和文件修改由用户自行执行
 - 💬 `-c` 上下文延续，自动带上一次对话（SQLite 持久化）
-- 🐙 Git 快捷子命令：`aic commit`（生成提交信息）、`aic review`（代码评审）
+- 🧩 标准输入组合：git diff、日志等文本都可以通过管道交给 `aic` 分析
 - 🧠 单一 OpenAI-compatible API 配置，DeepSeek、OpenAI、OpenRouter 等统一接入
 - ⚙️ `aic model` 配置当前模型与 API 地址，始终只保留一组配置
 
@@ -118,16 +118,22 @@ aic -c "换一种说法"
 
 `-c` 自动带上一次对话的上下文（最近 12 条），无需打开会话窗口。
 
-### Git 快捷子命令
+### Git diff 管道示例
 
 ```bash
-aic commit              # 读取改动并生成约定式提交信息，不会提交
-aic commit "强调性能优化"  # 附加生成要求
+git diff | aic "生成一行符合规范的 commit message"
+git diff --cached | aic "生成一行符合规范的 commit message，并强调性能优化"
+git diff HEAD | aic "检查这次改动是否有明显问题"
+```
+
+这里的 `git diff | aic` 只是标准输入能力的一个演示，不是 `aic` 专有的 Git 功能。由用户决定把哪一份 diff 传给 `aic`，`aic` 只负责分析输入并输出回答。
+
+### 代码评审
+
+```bash
 aic review              # 评审未提交的改动
 aic review src/app      # 只评审指定路径
 ```
-
-`commit` 优先读取暂存区；没有暂存改动时读取工作区相对 `HEAD` 的差异。它只输出提交信息，不会自动暂存或执行 `git commit`。
 
 ### 完整参数
 
@@ -154,7 +160,7 @@ ai-call/
 │   └── app/
 │       ├── args.ts                 # 参数解析与帮助文本
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
-│       ├── git-commands.ts         # commit / review 子命令
+│       ├── git-commands.ts         # review 子命令
 │       ├── model.ts                # aic model 模型配置
 │       ├── tty.ts                  # API Key 输入与转圈提示
 │       └── assistant.ts            # 助手门面
@@ -181,7 +187,7 @@ A: 两个痛点。一是很多 AI 编程助手把 TUI/REPL 做得很「重」：
 
 **Q: 已经有 Claude Code / Copilot 了，为什么还要 AI Call？**
 
-A: 定位不同，不是替代关系。Claude Code 是项目级 Agent，负责多文件改造、测试、调试这种长任务；AI Call 是终端级「外脑」，解决高频小问题：记不住命令、快速解释报错、生成 commit message、代码评审。AI Call 只保留轻量、只读的本地查询工具，并限制工具调用次数和项目路径。两者配合使用：复杂任务交给项目级 Agent，日常小任务交给 AI Call。
+A: 定位不同，不是替代关系。Claude Code 是项目级 Agent，负责多文件改造、测试、调试这种长任务；AI Call 是终端级「外脑」，解决高频小问题：记不住命令、快速解释报错、通过管道生成 commit message、代码评审。AI Call 只保留轻量、只读的本地查询工具，并限制工具调用次数和项目路径。两者配合使用：复杂任务交给项目级 Agent，日常小任务交给 AI Call。
 
 **Q: AI Call 的优势是什么？**
 
@@ -195,7 +201,7 @@ A:
 
 **Q: 和 `claude -p`、`gh copilot` 这类命令有什么不同？**
 
-A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/stderr 严格分离保证管道纯净；只读查询本地项目；`commit`/`review` 这类开箱即用的 Git 子命令。另外不绑定任何单一模型厂商。
+A: 目标场景类似但侧重不同。AI Call 的差异化在三点：stdout/stderr 严格分离保证管道纯净；只读查询本地项目；可以把 Git diff、日志等已有命令的输出直接交给模型分析。另外不绑定任何单一模型厂商。
 
 **Q: 命令不可用？**
 A: 确认已执行 `pnpm install`、`pnpm run build`、`npm link`。

@@ -24,6 +24,13 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.baseUrl, undefined);
 });
 
+test("commit 不再作为专用子命令", () => {
+  const args = parseCliArgs(["commit"]);
+
+  assert.equal(args.subcommand, undefined);
+  assert.equal(args.prompt, "commit");
+});
+
 test("执行权限、临时模型和旧配置显示参数已移除", () => {
   assert.throws(
     () => parseCliArgs(["-m", "gpt-5-mini", "hello"]),
