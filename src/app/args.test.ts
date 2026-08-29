@@ -25,6 +25,25 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.initConfig, false);
 });
 
+test("clear 子命令只用于清空本地历史", () => {
+  const args = parseCliArgs(["clear"]);
+
+  assert.equal(args.subcommand, "clear");
+  assert.equal(args.prompt, "");
+  assert.throws(
+    () => parseCliArgs(["clear", "hello"]),
+    /clear 子命令不接受问题参数/,
+  );
+  assert.throws(
+    () => parseCliArgs(["clear", "-c"]),
+    /clear 子命令不能配合 -c/,
+  );
+  assert.throws(
+    () => parseCliArgs(["clear", "--base-url", "https://example.com/v1"]),
+    /--base-url 只能配合 model 子命令使用/,
+  );
+});
+
 test("model --init 强制进入交互配置", () => {
   const args = parseCliArgs(["model", "--init"]);
 

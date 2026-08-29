@@ -258,6 +258,11 @@ class AppDatabase {
   trimMessages(conversationId: number, limit: number): void {
     MessageModel.trimToLatest(conversationId, limit);
   }
+
+  clearConversationHistory(conversationId: number): void {
+    MessageModel.clear(conversationId);
+    db.exec("VACUUM");
+  }
 }
 
 const databaseInstance = new AppDatabase();
