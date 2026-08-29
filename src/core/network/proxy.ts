@@ -354,15 +354,18 @@ function createProxyDispatcher(settings: ProxySettings): Dispatcher | undefined 
 }
 
 let configuredSignature = "";
+let configuredDispatcher: Dispatcher | undefined;
 
-export function configureProxyDispatcher(): void {
+export function configureProxyDispatcher(): Dispatcher | undefined {
   const settings = readProxySettings();
   const signature = JSON.stringify(settings);
   if (signature === configuredSignature) {
-    return;
+    return configuredDispatcher;
   }
 
   const dispatcher = createProxyDispatcher(settings);
   setGlobalDispatcher(dispatcher ?? new Agent());
   configuredSignature = signature;
+  configuredDispatcher = dispatcher;
+  return dispatcher;
 }

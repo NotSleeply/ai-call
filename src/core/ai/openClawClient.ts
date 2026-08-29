@@ -1,6 +1,7 @@
 import { config as loadDotEnv } from "dotenv";
 import { homedir } from "os";
 import { join } from "path";
+import type { Dispatcher } from "undici";
 import { configureProxyDispatcher } from "../network/proxy.js";
 
 export type ChatRole = "system" | "user" | "assistant" | "tool";
@@ -305,6 +306,22 @@ loadDotEnv({
   path: [".env", join(homedir(), ".ai-call", ".env")],
 });
 
+type FetchInitWithDispatcher = RequestInit & {
+  dispatcher?: Dispatcher;
+};
+
+function fetchWithProxy(
+  input: string,
+  init: RequestInit,
+): Promise<Response> {
+  const dispatcher = configureProxyDispatcher();
+  const requestInit: FetchInitWithDispatcher = dispatcher
+    ? { ...init, dispatcher }
+    : init;
+
+  return fetch(input, requestInit);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -430,8 +447,6 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
-      configureProxyDispatcher();
-
       const body: Record<string, unknown> = {
         model: this.model,
         messages,
@@ -443,7 +458,7 @@ export class OpenClawClient {
         body.tool_choice = "auto";
       }
 
-      const response = await fetch(this.resolveEndpoint(), {
+      const response = await fetchWithProxy(this.resolveEndpoint(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -528,9 +543,7 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
-      configureProxyDispatcher();
-
-      const response = await fetch(this.resolveEndpoint(), {
+      const response = await fetchWithProxy(this.resolveEndpoint(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

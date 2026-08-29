@@ -1,5 +1,6 @@
 import { after, mock, test } from "node:test";
 import assert from "node:assert/strict";
+import type { Dispatcher } from "undici";
 
 const previousApiKey = process.env.AIC_API_KEY;
 const previousBaseUrl = process.env.AIC_BASE_URL;
@@ -44,6 +45,36 @@ test("非流式 API 失败会抛出错误", async () => {
     );
   } finally {
     globalThis.fetch = previousFetch;
+  }
+});
+
+test("API 请求会显式传递代理 dispatcher", async () => {
+  const previousFetch = globalThis.fetch;
+  let requestInit: RequestInit & { dispatcher?: Dispatcher } | undefined;
+
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), "http://mock.invalid/v1/chat/completions");
+    requestInit = init as RequestInit & { dispatcher?: Dispatcher };
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  const previousHttpsProxy = process.env.HTTPS_PROXY;
+  const previousHttpsProxyLowercase = process.env.https_proxy;
+  process.env.HTTPS_PROXY = "http://proxy-for-test.invalid:7890";
+  process.env.https_proxy = "http://proxy-for-test.invalid:7890";
+
+  try {
+    await new OpenClawClient().generateReply("hello");
+    assert.ok(requestInit?.dispatcher);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousHttpsProxy === undefined) delete process.env.HTTPS_PROXY;
+    else process.env.HTTPS_PROXY = previousHttpsProxy;
+    if (previousHttpsProxyLowercase === undefined) delete process.env.https_proxy;
+    else process.env.https_proxy = previousHttpsProxyLowercase;
   }
 });
 
