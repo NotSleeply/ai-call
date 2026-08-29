@@ -6,7 +6,6 @@
  */
 import { CliArgError, CLI_NAME, parseCliArgs, USAGE_TEXT } from "./app/args.js";
 import { runOneShot } from "./app/one-shot.js";
-import { runReview } from "./app/git-commands.js";
 import { runModel } from "./app/model.js";
 import { VERSION } from "./version.js";
 
@@ -33,9 +32,7 @@ async function main(): Promise<void> {
       process.stdout.write(`${CLI_NAME} ${VERSION}\n`);
       return;
     case "one-shot": {
-      if (args.subcommand === "review") {
-        process.exitCode = await runReview(args);
-      } else if (args.subcommand === "model") {
+      if (args.subcommand === "model") {
         process.exitCode = await runModel(args);
       } else {
         process.exitCode = await runOneShot(args);

@@ -24,11 +24,11 @@ test("model 不带参数时用于显示当前配置", () => {
   assert.equal(args.baseUrl, undefined);
 });
 
-test("commit 不再作为专用子命令", () => {
-  const args = parseCliArgs(["commit"]);
+test("Git 操作名称不再作为专用子命令", () => {
+  const args = parseCliArgs(["commit", "review"]);
 
   assert.equal(args.subcommand, undefined);
-  assert.equal(args.prompt, "commit");
+  assert.equal(args.prompt, "commit review");
 });
 
 test("执行权限、临时模型和旧配置显示参数已移除", () => {

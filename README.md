@@ -128,13 +128,6 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 
 这里的 `git diff | aic` 只是标准输入能力的一个演示，不是 `aic` 专有的 Git 功能。由用户决定把哪一份 diff 传给 `aic`，`aic` 只负责分析输入并输出回答。
 
-### 代码评审
-
-```bash
-aic review              # 评审未提交的改动
-aic review src/app      # 只评审指定路径
-```
-
 ### 完整参数
 
 | 参数 | 说明 |
@@ -160,7 +153,6 @@ ai-call/
 │   └── app/
 │       ├── args.ts                 # 参数解析与帮助文本
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
-│       ├── git-commands.ts         # review 子命令
 │       ├── model.ts                # aic model 模型配置
 │       ├── tty.ts                  # API Key 输入与转圈提示
 │       └── assistant.ts            # 助手门面
