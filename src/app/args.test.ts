@@ -60,6 +60,34 @@ test("clear 子命令只用于清空本地历史", () => {
   );
 });
 
+test("data --clear 只清除本地运行数据", () => {
+  const args = parseCliArgs(["data", "--clear"]);
+
+  assert.equal(args.subcommand, "data");
+  assert.equal(args.clearData, true);
+  assert.equal(args.prompt, "");
+  assert.throws(
+    () => parseCliArgs(["data"]),
+    /data 子命令需要配合 --clear 使用/,
+  );
+  assert.throws(
+    () => parseCliArgs(["data", "--clear", "hello"]),
+    /data 子命令不接受问题参数/,
+  );
+  assert.throws(
+    () => parseCliArgs(["data", "--clear", "-c"]),
+    /data 子命令不能配合 -c/,
+  );
+  assert.throws(
+    () => parseCliArgs(["data", "--clear", "--base-url", "https://example.com/v1"]),
+    /--base-url 只能配合 model 子命令使用/,
+  );
+  assert.throws(
+    () => parseCliArgs(["--clear", "hello"]),
+    /--clear 只能配合 data 子命令使用/,
+  );
+});
+
 test("model --init 强制进入交互配置", () => {
   const args = parseCliArgs(["model", "--init"]);
 

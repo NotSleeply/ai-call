@@ -159,6 +159,14 @@ aic clear
 
 该命令只清除 `-c` 使用的本地对话记录，不影响模型配置、API Key 和项目文件。
 
+如需清除全部本地运行数据（包括对话数据库和能力缓存），运行：
+
+```bash
+aic data --clear
+```
+
+该命令不影响模型、API Key 和代理配置。
+
 ### Git diff 管道示例
 
 ```bash
@@ -175,6 +183,7 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 | --- | --- |
 | `-c, --continue` | 带上一次对话的上下文 |
 | `--init` | 强制进入模型或代理交互配置（model / proxy 子命令） |
+| `--clear` | 清除本地运行数据（data 子命令） |
 | `--base-url <地址>` | 设置模型配置中的 OpenAI-compatible API 地址（model 子命令） |
 | `-h, --help` / `-v, --version` | 帮助 / 版本 |
 
@@ -198,6 +207,7 @@ ai-call/
 │       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
 │       ├── model.ts                # aic model 模型配置
 │       ├── proxy.ts                # aic proxy 代理配置
+│       ├── data.ts                 # aic data --clear 数据清理
 │       ├── tty.ts                  # API Key 输入与转圈提示
 │       └── assistant.ts            # 助手门面
 ├── src/core/

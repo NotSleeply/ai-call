@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- 新增 `aic data --clear`，清除本地运行数据但保留模型、API Key 和代理配置
+
 ### Fixed
 
 - 缓存模型是否支持关闭推理，避免后续请求重复尝试不兼容的 `reasoning_effort` 参数

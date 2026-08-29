@@ -4,9 +4,14 @@
  * 职责：解析 aic [选项] <问题> 参数，输出干净的提示文本
  */
 
-export type SubcommandName = "model" | "proxy" | "clear";
+export type SubcommandName = "model" | "proxy" | "clear" | "data";
 
-export const SUBCOMMANDS: SubcommandName[] = ["model", "proxy", "clear"];
+export const SUBCOMMANDS: SubcommandName[] = [
+  "model",
+  "proxy",
+  "clear",
+  "data",
+];
 
 export const CLI_NAME = "aic";
 
@@ -17,6 +22,7 @@ export interface CliArgs {
   baseUrl?: string;
   continueSession: boolean;
   initConfig: boolean;
+  clearData: boolean;
   subcommand?: SubcommandName;
 }
 
@@ -35,10 +41,12 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} proxy                       查看当前代理配置
   ${CLI_NAME} proxy --init                交互配置标准网络代理
   ${CLI_NAME} clear                       清空本地 -c 对话历史
+  ${CLI_NAME} data --clear                清除本地运行数据（不影响模型和代理配置）
 
 选项:
   -c, --continue         带上上一次对话的上下文继续提问
       --base-url <地址>  设置模型使用的 OpenAI-compatible API 地址（配合 model 子命令）
+      --clear             清除本地运行数据（配合 data 子命令）
   -h, --help             显示此帮助
   -v, --version          显示版本号
 
@@ -60,6 +68,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     prompt: "",
     continueSession: false,
     initConfig: false,
+    clearData: false,
   };
 
   const promptParts: string[] = [];
@@ -96,6 +105,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--init":
         result.initConfig = true;
         break;
+      case "--clear":
+        result.clearData = true;
+        break;
       case "-c":
       case "--continue":
         result.continueSession = true;
@@ -126,6 +138,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
     result.subcommand !== "proxy"
   ) {
     throw new CliArgError("--init 只能配合 model 或 proxy 子命令使用");
+  }
+
+  if (result.clearData && result.subcommand !== "data") {
+    throw new CliArgError("--clear 只能配合 data 子命令使用");
   }
 
   if (result.subcommand === "model") {
@@ -172,6 +188,24 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
     if (result.continueSession) {
       throw new CliArgError("clear 子命令不能配合 -c");
+    }
+
+    result.prompt = "";
+  } else if (result.subcommand === "data") {
+    if (promptParts.length > 0) {
+      throw new CliArgError("data 子命令不接受问题参数");
+    }
+
+    if (!result.clearData) {
+      throw new CliArgError("data 子命令需要配合 --clear 使用");
+    }
+
+    if (result.baseUrl) {
+      throw new CliArgError("--base-url 只能配合 model 子命令使用");
+    }
+
+    if (result.continueSession) {
+      throw new CliArgError("data 子命令不能配合 -c");
     }
 
     result.prompt = "";

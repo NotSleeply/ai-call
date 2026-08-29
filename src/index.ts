@@ -9,6 +9,7 @@ import { runOneShot } from "./app/one-shot.js";
 import { runModel } from "./app/model.js";
 import { runProxy } from "./app/proxy.js";
 import { runClear } from "./app/clear.js";
+import { runData } from "./app/data.js";
 import { VERSION } from "./version.js";
 
 async function main(): Promise<void> {
@@ -40,6 +41,8 @@ async function main(): Promise<void> {
         process.exitCode = await runProxy(args);
       } else if (args.subcommand === "clear") {
         process.exitCode = await runClear();
+      } else if (args.subcommand === "data") {
+        process.exitCode = await runData(args);
       } else {
         process.exitCode = await runOneShot(args);
       }
