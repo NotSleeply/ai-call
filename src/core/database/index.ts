@@ -98,9 +98,20 @@ const stmts = {
     "INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)",
   ),
   getMessages: db.prepare(
-    "SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+    "SELECT * FROM messages WHERE conversation_id = ? ORDER BY id ASC",
   ),
   clearMessages: db.prepare("DELETE FROM messages WHERE conversation_id = ?"),
+  trimMessages: db.prepare(`
+    DELETE FROM messages
+    WHERE conversation_id = ?
+      AND id NOT IN (
+        SELECT id
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+      )
+  `),
 };
 
 // 对话操作
@@ -188,6 +199,19 @@ export const MessageModel = {
   clear(conversationId: number): void {
     stmts.clearMessages.run(conversationId);
   },
+
+  trimToLatest(conversationId: number, limit: number): void {
+    if (!Number.isInteger(limit) || limit < 0) {
+      throw new Error("消息保留数量必须是非负整数");
+    }
+
+    if (limit === 0) {
+      MessageModel.clear(conversationId);
+      return;
+    }
+
+    stmts.trimMessages.run(conversationId, conversationId, limit);
+  },
 };
 
 // 兼容旧版 CLI 调用方式（Database.getInstance）
@@ -229,6 +253,10 @@ class AppDatabase {
     content: string,
   ): void {
     MessageModel.add(conversationId, role, content);
+  }
+
+  trimMessages(conversationId: number, limit: number): void {
+    MessageModel.trimToLatest(conversationId, limit);
   }
 }
 

@@ -12,6 +12,8 @@ import type { CliArgs } from "./args.js";
 import { AgentRuntime } from "../core/agent/runtime.js";
 import { normalizeTerminalText } from "./terminal-output.js";
 
+export const HISTORY_MESSAGE_LIMIT = 12;
+
 async function readStdinIfPiped(): Promise<string> {
   if (process.stdin.isTTY) {
     return "";
@@ -44,6 +46,7 @@ async function persistExchange(
 
     db.addMessage(conversationId, "user", question);
     db.addMessage(conversationId, "assistant", answer);
+    db.trimMessages(conversationId, HISTORY_MESSAGE_LIMIT);
   } catch {
     // 持久化失败不影响主流程（如 better-sqlite3 绑定缺失）
   }
@@ -54,7 +57,7 @@ async function persistExchange(
  * 数据库不可用时返回空数组（降级为全新上下文）。
  */
 export async function loadRecentHistory(
-  limit: number = 12,
+  limit: number = HISTORY_MESSAGE_LIMIT,
 ): Promise<Array<{ role: string; content: string }>> {
   try {
     const { Database } = await import("../core/database/index.js");
