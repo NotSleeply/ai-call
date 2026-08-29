@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-08-30
+
 ### Added
 
 - `aic model` 配置当前模型与 OpenAI-compatible API 地址，始终只保留一组配置
