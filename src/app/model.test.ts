@@ -4,8 +4,10 @@ import {
   CONFIG_KEYS,
   DEFAULT_API_BASE_URL,
   DEFAULT_MODEL,
+  askToTestModelConnection,
   hasApiKey,
   isCompleteModelConfig,
+  isConfirmationAnswer,
   validateBaseUrl,
 } from "./model.js";
 
@@ -51,4 +53,44 @@ test("完整模型配置必须包含模型、有效地址和 API Key", () => {
     isCompleteModelConfig("gpt-5-mini", "https://api.openai.com/v1", ""),
     false,
   );
+});
+
+test("连接测试确认只接受单个 y 或 Y", () => {
+  assert.equal(isConfirmationAnswer("y"), true);
+  assert.equal(isConfirmationAnswer(" Y "), true);
+  assert.equal(isConfirmationAnswer("yes"), false);
+  assert.equal(isConfirmationAnswer(""), false);
+  assert.equal(isConfirmationAnswer("n"), false);
+});
+
+test("连接测试确认默认为跳过，确认后才调用测试函数", async () => {
+  const answers = ["", "n", "yes", "Y"];
+  let testCount = 0;
+
+  for (const answer of answers) {
+    const result = await askToTestModelConnection(
+      async (prompt) => {
+        assert.equal(prompt, "是否立即测试模型连接？(y/N): ");
+        return answer;
+      },
+      async () => {
+        testCount += 1;
+      },
+    );
+
+    assert.equal(result, 0);
+  }
+
+  assert.equal(testCount, 1);
+});
+
+test("连接测试失败返回失败状态", async () => {
+  const result = await askToTestModelConnection(
+    async () => "y",
+    async () => {
+      throw new Error("连接被拒绝");
+    },
+  );
+
+  assert.equal(result, 1);
 });

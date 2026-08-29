@@ -17,6 +17,7 @@ import {
 import { CLI_NAME } from "./args.js";
 import { askSecret, askText } from "./tty.js";
 import type { CliArgs } from "./args.js";
+import { OpenClawClient } from "../core/ai/openClawClient.js";
 
 export const DEFAULT_API_BASE_URL = "https://api.openai.com/v1";
 export const DEFAULT_MODEL = "gpt-5-mini";
@@ -240,7 +241,7 @@ async function runInteractiveModelSetup(
     enteredApiKey = await askRequiredSecret();
   }
 
-  return saveModelConfig(
+  return saveModelConfigAndMaybeTest(
     configPath,
     config.content,
     modelName,
@@ -256,6 +257,36 @@ async function askRequiredSecret(): Promise<string> {
       return value;
     }
     process.stderr.write(`${CLI_NAME}: API Key 不能为空，请重新输入。\n`);
+  }
+}
+
+export function isConfirmationAnswer(value: string): boolean {
+  return value.trim().toLowerCase() === "y";
+}
+
+async function testCurrentModelConnection(): Promise<void> {
+  await new OpenClawClient().testConnection();
+}
+
+export async function askToTestModelConnection(
+  ask: (prompt: string) => Promise<string> = askText,
+  testConnection: () => Promise<void> = testCurrentModelConnection,
+): Promise<number> {
+  const answer = await ask("是否立即测试模型连接？(y/N): ");
+  if (!isConfirmationAnswer(answer)) {
+    return 0;
+  }
+
+  process.stderr.write("正在测试模型连接...\n");
+
+  try {
+    await testConnection();
+    process.stdout.write("模型连接测试成功。\n");
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${CLI_NAME}: 模型连接测试失败: ${message}\n`);
+    return 1;
   }
 }
 
@@ -299,6 +330,28 @@ function saveModelConfig(
   process.stdout.write(`模型: ${modelName}\n`);
   process.stdout.write(`API 地址: ${baseUrl}\n`);
   return 0;
+}
+
+async function saveModelConfigAndMaybeTest(
+  configPath: string,
+  content: string,
+  modelName: string,
+  baseUrl: string,
+  enteredApiKey?: string,
+): Promise<number> {
+  const result = saveModelConfig(
+    configPath,
+    content,
+    modelName,
+    baseUrl,
+    enteredApiKey,
+  );
+
+  if (result !== 0 || process.stdin.isTTY !== true) {
+    return result;
+  }
+
+  return askToTestModelConnection();
 }
 
 export async function runModel(args: CliArgs): Promise<number> {
@@ -351,7 +404,7 @@ export async function runModel(args: CliArgs): Promise<number> {
     return 1;
   }
 
-  return saveModelConfig(
+  return saveModelConfigAndMaybeTest(
     configPath,
     current.content,
     modelName,

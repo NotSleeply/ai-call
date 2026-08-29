@@ -47,6 +47,67 @@ test("非流式 API 失败会抛出错误", async () => {
   }
 });
 
+test("连接测试会实际请求当前模型的聊天接口", async () => {
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), "http://mock.invalid/v1/chat/completions");
+    assert.equal(init?.method, "POST");
+    assert.equal(init?.headers && (init.headers as Record<string, string>).Authorization, "Bearer test-key");
+
+    const body = JSON.parse(String(init?.body)) as {
+      model?: string;
+      messages?: Array<{ role?: string; content?: string }>;
+      stream?: boolean;
+    };
+    assert.equal(body.model, "test-model");
+    assert.deepEqual(body.messages, [
+      { role: "user", content: "请回复 OK。" },
+    ]);
+    assert.equal(body.stream, undefined);
+
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    await new OpenClawClient().testConnection();
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("fetch failed 会显示底层网络错误原因", async () => {
+  const previousFetch = globalThis.fetch;
+  const cause = Object.assign(
+    new Error("getaddrinfo ENOTFOUND api.example.com"),
+    { code: "ENOTFOUND" },
+  );
+
+  globalThis.fetch = async () => {
+    throw new TypeError("fetch failed", { cause });
+  };
+
+  try {
+    await assert.rejects(
+      new OpenClawClient().generateReply("hello"),
+      (error) => {
+        assert.match(
+          (error as Error).message,
+          /无法解析 API 地址，请检查域名和 DNS/,
+        );
+        assert.match((error as Error).message, /ENOTFOUND/);
+        assert.match((error as Error).message, /api\.example\.com/);
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test("流式响应已输出内容后不会重试请求", async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;

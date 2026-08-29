@@ -70,7 +70,7 @@ aic model
 aic model --init
 ```
 
-它会强制进入交互配置，已有值可以直接回车保留。不要把 API Key 写进命令行参数。
+它会强制进入交互配置，已有值可以直接回车保留。配置保存后会询问是否立即测试模型连接：输入 `y` 才测试，直接回车或输入其他内容都会跳过。测试失败不会回滚已经保存的配置。不要把 API Key 写进命令行参数。
 
 切换模型时可以继续使用非交互方式：
 
@@ -78,7 +78,7 @@ aic model --init
 aic model deepseek-chat --base-url https://api.deepseek.com/v1
 ```
 
-命令会在交互终端中提示输入新的 API Key；直接回车可以保留当前 Key。
+命令会在交互终端中提示输入新的 API Key；直接回车可以保留当前 Key，保存后同样会询问是否测试连接。非交互环境不会询问测试连接。
 
 只支持 OpenAI-compatible Chat Completions API。模型名称不能用来自动推断 API 地址，因此切换服务时必须明确提供 `--base-url`。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
 

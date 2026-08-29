@@ -77,6 +77,137 @@ interface RequestControl {
   dispose(): void;
 }
 
+const DNS_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "EAI_FAIL",
+  "ENOTFOUND",
+]);
+const CONNECTION_REFUSED_ERROR_CODES = new Set(["ECONNREFUSED"]);
+const CONNECTION_TIMEOUT_ERROR_CODES = new Set([
+  "ETIMEDOUT",
+  "ESOCKETTIMEDOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+]);
+const TLS_ERROR_CODES = new Set([
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+]);
+const NETWORK_UNREACHABLE_ERROR_CODES = new Set([
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+]);
+const CONNECTION_INTERRUPTED_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "EPIPE",
+  "UND_ERR_SOCKET",
+]);
+const TRANSPORT_ERROR_CODES = new Set([
+  ...DNS_ERROR_CODES,
+  ...CONNECTION_REFUSED_ERROR_CODES,
+  ...CONNECTION_TIMEOUT_ERROR_CODES,
+  ...TLS_ERROR_CODES,
+  ...NETWORK_UNREACHABLE_ERROR_CODES,
+  ...CONNECTION_INTERRUPTED_ERROR_CODES,
+]);
+
+interface ErrorDetails {
+  codes: string[];
+  messages: string[];
+}
+
+function collectErrorDetails(error: unknown): ErrorDetails {
+  const codes: string[] = [];
+  const messages: string[] = [];
+  const queue: unknown[] = [error];
+  const visited = new Set<object>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!isRecord(current) || visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+
+    if (typeof current.code === "string") {
+      codes.push(current.code.trim().toUpperCase());
+    }
+    if (typeof current.message === "string") {
+      messages.push(current.message.trim());
+    }
+
+    if (current.cause !== undefined) {
+      queue.push(current.cause);
+    }
+    if (Array.isArray(current.errors)) {
+      queue.push(...current.errors);
+    }
+  }
+
+  return { codes, messages };
+}
+
+function redactTransportDetail(value: string): string {
+  let detail = value.replace(/\s+/g, " ").trim();
+  detail = detail.replace(
+    /(https?:\/\/[^/\s:@]+):[^@\s]+@/gi,
+    "$1:[REDACTED]@",
+  );
+  detail = detail.replace(
+    /((?:api[_-]?key|access[_-]?token|token)=)[^&\s]+/gi,
+    "$1[REDACTED]",
+  );
+
+  const apiKey = process.env.AIC_API_KEY?.trim();
+  if (apiKey) {
+    detail = detail.split(apiKey).join("[REDACTED]");
+  }
+
+  return detail.slice(0, 300);
+}
+
+function normalizeTransportError(error: unknown): Error | undefined {
+  const details = collectErrorDetails(error);
+  const allMessages = details.messages.join(" ");
+  const allMessagesLower = allMessages.toLowerCase();
+  const codeFromMessage = allMessages.match(
+    /\b(?:EAI_AGAIN|EAI_FAIL|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ESOCKETTIMEDOUT|UND_ERR_CONNECT_TIMEOUT|CERT_HAS_EXPIRED|ERR_TLS_CERT_ALTNAME_INVALID|UNABLE_TO_VERIFY_LEAF_SIGNATURE|EHOSTUNREACH|ENETUNREACH|ECONNRESET|EPIPE|UND_ERR_SOCKET)\b/i,
+  )?.[0]?.toUpperCase();
+  const code =
+    details.codes.find((candidate) => TRANSPORT_ERROR_CODES.has(candidate)) ??
+    codeFromMessage;
+  const isFetchFailure = allMessagesLower.includes("fetch failed");
+
+  if (!isFetchFailure && !code) {
+    return undefined;
+  }
+
+  let reason = "无法连接到模型 API，请检查网络、代理和 API 地址";
+  if (code && DNS_ERROR_CODES.has(code)) {
+    reason = "无法解析 API 地址，请检查域名和 DNS";
+  } else if (code && CONNECTION_REFUSED_ERROR_CODES.has(code)) {
+    reason = "API 服务拒绝了连接，请检查地址和服务状态";
+  } else if (code && CONNECTION_TIMEOUT_ERROR_CODES.has(code)) {
+    reason = "连接 API 超时，请检查网络和 API 地址";
+  } else if (code && TLS_ERROR_CODES.has(code)) {
+    reason = "API 的 TLS/证书校验失败，请检查 HTTPS 地址和证书";
+  } else if (code && NETWORK_UNREACHABLE_ERROR_CODES.has(code)) {
+    reason = "网络无法到达 API 地址，请检查网络连接";
+  } else if (code && CONNECTION_INTERRUPTED_ERROR_CODES.has(code)) {
+    reason = "与 API 的网络连接被中断，请检查网络稳定性";
+  }
+
+  const detailMessage = details.messages.find(
+    (message) => message && !/^fetch failed$/i.test(message),
+  );
+  const detail = detailMessage ? redactTransportDetail(detailMessage) : "";
+  const suffix = [code, detail && detail !== code ? detail : ""]
+    .filter(Boolean)
+    .join(": ");
+
+  return new Error(`${reason}${suffix ? `（${suffix}）` : ""}`);
+}
+
 function createRequestControl(parentSignal?: AbortSignal): RequestControl {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -140,6 +271,11 @@ function normalizeRequestError(
 
   if (request.signal.aborted) {
     return new RequestCancelledError();
+  }
+
+  const transportError = normalizeTransportError(error);
+  if (transportError) {
+    return transportError;
   }
 
   return error instanceof Error ? error : new Error(String(error));
@@ -459,6 +595,18 @@ export class OpenClawClient {
       throw normalizeRequestError(error, request);
     } finally {
       request.dispose();
+    }
+  }
+
+  async testConnection(options: RequestOptions = {}): Promise<void> {
+    const turn = await this.requestChat(
+      [{ role: "user", content: "请回复 OK。" }],
+      [],
+      options,
+    );
+
+    if (turn.toolCalls.length > 0) {
+      throw new Error("模型连接测试收到了未请求的工具调用");
     }
   }
 
