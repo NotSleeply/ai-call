@@ -10,6 +10,7 @@ import { CLI_NAME } from "./args.js";
 import { askConfirmation, isConfirmYes, startSpinner } from "./tty.js";
 import type { CliArgs } from "./args.js";
 import {
+  AgentActionDeniedError,
   AgentRuntime,
   type AgentActionRequest,
 } from "../core/agent/runtime.js";
@@ -180,6 +181,10 @@ export async function runOneShot(args: CliArgs): Promise<number> {
     if (error instanceof ConfirmationUnavailableError) {
       process.stderr.write(`${CLI_NAME}: 无法读取确认输入，已取消操作\n`);
       return 2;
+    }
+    if (error instanceof AgentActionDeniedError) {
+      process.stderr.write(`${CLI_NAME}: 用户拒绝了操作，已取消本次任务\n`);
+      return 0;
     }
     const msg = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${CLI_NAME}: ${msg}\n`);

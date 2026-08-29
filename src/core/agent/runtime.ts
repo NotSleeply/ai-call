@@ -32,6 +32,13 @@ export interface AgentActionRequest {
   rawArguments: string;
 }
 
+export class AgentActionDeniedError extends Error {
+  constructor() {
+    super("用户拒绝了此次操作");
+    this.name = "AgentActionDeniedError";
+  }
+}
+
 export interface AgentRunOptions extends ChatGenerationOptions {
   allowActions?: boolean;
   rootDir?: string;
@@ -175,13 +182,7 @@ export class AgentRuntime {
         });
 
         if (!approved) {
-          toolContent = toolMessageContent(
-            JSON.stringify({
-              cancelled: true,
-              message: "用户拒绝了此次操作",
-            }),
-            true,
-          );
+          throw new AgentActionDeniedError();
         } else {
           const result = await executeLocalTool(
             toolCall.function.name,

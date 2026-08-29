@@ -5,7 +5,7 @@ import type {
   OpenClawClient,
   ToolDefinition,
 } from "../ai/openClawClient.js";
-import { AgentRuntime } from "./runtime.js";
+import { AgentActionDeniedError, AgentRuntime } from "./runtime.js";
 
 class FakeClient {
   readonly calls: Array<{ tools: ToolDefinition[] }> = [];
@@ -88,4 +88,24 @@ test("确认输入异常不会被 Agent 吞掉", async () => {
     }),
     /确认输入不可用/,
   );
+});
+
+test("用户拒绝动作后立即终止 Agent", async () => {
+  const client = new FakeClient([
+    toolCall("run_command", { command: "node" }, "1"),
+    { content: "不应该继续请求模型", toolCalls: [] },
+  ]);
+  const runtime = new AgentRuntime(client as unknown as OpenClawClient);
+
+  await assert.rejects(
+    runtime.run("执行命令", [], {
+      allowActions: true,
+      confirmAction: async () => false,
+    }),
+    (error: unknown) =>
+      error instanceof AgentActionDeniedError &&
+      error.message === "用户拒绝了此次操作",
+  );
+
+  assert.equal(client.calls.length, 1);
 });
