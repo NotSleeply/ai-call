@@ -1,13 +1,19 @@
 import { after, mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Dispatcher } from "undici";
 
 const previousApiKey = process.env.AIC_API_KEY;
 const previousBaseUrl = process.env.AIC_BASE_URL;
 const previousModel = process.env.AIC_MODEL;
+const previousDataDir = process.env.AI_CALL_DATA_DIR;
+const testDataDir = mkdtempSync(join(tmpdir(), "aic-reasoning-test-"));
 process.env.AIC_API_KEY = "test-key";
 process.env.AIC_BASE_URL = "http://mock.invalid/v1";
 process.env.AIC_MODEL = "test-model";
+process.env.AI_CALL_DATA_DIR = testDataDir;
 
 const {
   OpenClawClient,
@@ -32,6 +38,9 @@ after(() => {
   else process.env.AIC_BASE_URL = previousBaseUrl;
   if (previousModel === undefined) delete process.env.AIC_MODEL;
   else process.env.AIC_MODEL = previousModel;
+  if (previousDataDir === undefined) delete process.env.AI_CALL_DATA_DIR;
+  else process.env.AI_CALL_DATA_DIR = previousDataDir;
+  rmSync(testDataDir, { recursive: true, force: true });
 });
 
 test("非流式 API 失败会抛出错误", async () => {
@@ -98,6 +107,7 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
       model?: string;
       messages?: Array<{ role?: string; content?: string }>;
       temperature?: unknown;
+      reasoning_effort?: unknown;
       stream?: boolean;
     };
     assert.equal(body.model, "test-model");
@@ -105,6 +115,7 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
       { role: "user", content: "请回复 OK。" },
     ]);
     assert.equal(body.temperature, undefined);
+    assert.equal(body.reasoning_effort, "none");
     assert.equal(body.stream, undefined);
 
     return new Response(
@@ -117,6 +128,130 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
     await createClient().testConnection();
   } finally {
     globalThis.fetch = previousFetch;
+  }
+});
+
+test("工具请求在模型不支持 reasoning_effort 时回退", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousModelForTest = process.env.AIC_MODEL;
+  process.env.AIC_MODEL = "unsupported-reasoning-model";
+  const requestBodies: Array<Record<string, unknown>> = [];
+
+  globalThis.fetch = async (_input, init) => {
+    requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+
+    if (requestBodies.length === 1) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message:
+              "Function tools with reasoning_effort are not supported for this model",
+          },
+        }),
+        { status: 400, statusText: "Bad Request" },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const turn = await createClient().generateAgentTurn(
+      [{ role: "user", content: "hello" }],
+      [
+        {
+          type: "function",
+          function: {
+            name: "find_files",
+            description: "find files",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+    );
+
+    assert.equal(turn.content, "OK");
+    assert.equal(requestBodies.length, 2);
+    assert.equal(requestBodies[0].reasoning_effort, "none");
+    assert.equal(requestBodies[1].reasoning_effort, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousModelForTest === undefined) delete process.env.AIC_MODEL;
+    else process.env.AIC_MODEL = previousModelForTest;
+  }
+});
+
+test("已记录模型不支持 reasoning_effort 后后续请求不再重试", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousModelForTest = process.env.AIC_MODEL;
+  process.env.AIC_MODEL = "cached-reject-model";
+  const requestBodies: Array<Record<string, unknown>> = [];
+
+  globalThis.fetch = async (_input, init) => {
+    requestBodies.push(
+      JSON.parse(String(init?.body)) as Record<string, unknown>,
+    );
+
+    if (requestBodies.length === 1) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message:
+              "Function tools with reasoning_effort are not supported for this model",
+          },
+        }),
+        { status: 400, statusText: "Bad Request" },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const client = createClient();
+    await client.generateAgentTurn(
+      [{ role: "user", content: "hello" }],
+      [
+        {
+          type: "function",
+          function: {
+            name: "find_files",
+            description: "find files",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+    );
+
+    assert.equal(requestBodies.length, 2);
+    assert.equal(requestBodies[0].reasoning_effort, "none");
+    assert.equal(requestBodies[1].reasoning_effort, undefined);
+
+    requestBodies.length = 0;
+    globalThis.fetch = async (_input, init) => {
+      const requestBody = JSON.parse(
+        String(init?.body),
+      ) as Record<string, unknown>;
+      requestBodies.push(requestBody);
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+
+    await createClient().generateReply("hello");
+    assert.equal(requestBodies.length, 1);
+    assert.equal(requestBodies[0].reasoning_effort, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousModelForTest === undefined) delete process.env.AIC_MODEL;
+    else process.env.AIC_MODEL = previousModelForTest;
   }
 });
 
@@ -158,9 +293,11 @@ test("流式响应中断后不重试且不强制发送 temperature", async () =>
     fetchCount += 1;
     const requestBody = JSON.parse(String(init?.body)) as {
       temperature?: unknown;
+      reasoning_effort?: unknown;
       stream?: unknown;
     };
     assert.equal(requestBody.temperature, undefined);
+    assert.equal(requestBody.reasoning_effort, "none");
     assert.equal(requestBody.stream, true);
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {

@@ -7,6 +7,10 @@ import {
   type Response as UndiciResponse,
 } from "undici";
 import { configureProxyDispatcher } from "../network/proxy.js";
+import {
+  getReasoningCapability,
+  setReasoningCapability,
+} from "./reasoningCapabilities.js";
 
 export type ChatRole = "system" | "user" | "assistant" | "tool";
 
@@ -325,6 +329,81 @@ function fetchWithProxy(
   return fetchImplementation(input, requestInit);
 }
 
+function isUnsupportedReasoningEffortResponse(
+  status: number,
+  errorText: string,
+): boolean {
+  if (status !== 400) {
+    return false;
+  }
+
+  const message = errorText.toLowerCase();
+  if (!message.includes("reasoning_effort")) {
+    return false;
+  }
+
+  return [
+    "not supported",
+    "unsupported",
+    "unknown",
+    "unrecognized",
+    "invalid",
+    "not allowed",
+    "extra inputs",
+    "additional properties",
+  ].some((marker) => message.includes(marker));
+}
+
+async function requestChatResponse(
+  fetchImplementation: FetchImplementation,
+  input: string,
+  baseUrl: string,
+  model: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  signal: AbortSignal,
+): Promise<UndiciResponse> {
+  const cachedCapability = getReasoningCapability(baseUrl, model);
+  let sendsReasoningEffort = cachedCapability !== "rejects-none";
+  let requestBody: Record<string, unknown> = { ...body };
+
+  if (sendsReasoningEffort) {
+    requestBody.reasoning_effort = "none";
+  }
+
+  while (true) {
+    const response = await fetchWithProxy(fetchImplementation, input, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+      signal,
+    });
+
+    if (response.ok) {
+      if (sendsReasoningEffort) {
+        setReasoningCapability(baseUrl, model, "supports-none");
+      }
+      return response;
+    }
+
+    const errorText = (await response.text()).slice(0, 4000);
+    if (
+      sendsReasoningEffort &&
+      isUnsupportedReasoningEffortResponse(response.status, errorText)
+    ) {
+      setReasoningCapability(baseUrl, model, "rejects-none");
+      requestBody = { ...requestBody };
+      delete requestBody.reasoning_effort;
+      sendsReasoningEffort = false;
+      continue;
+    }
+
+    throw new Error(
+      `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
+    );
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -464,22 +543,18 @@ export class OpenClawClient {
         body.tool_choice = "auto";
       }
 
-      const response = await fetchWithProxy(this.fetchImplementation, this.resolveEndpoint(), {
-        method: "POST",
-        headers: {
+      const response = await requestChatResponse(
+        this.fetchImplementation,
+        this.resolveEndpoint(),
+        this.baseUrl,
+        this.model,
+        {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify(body),
-        signal: request.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = (await response.text()).slice(0, 4000);
-        throw new Error(
-          `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
-        );
-      }
+        body,
+        request.signal,
+      );
 
       const data = (await response.json()) as ChatCompletionsResponse;
       const message = data.choices?.[0]?.message;
@@ -549,26 +624,22 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
-      const response = await fetchWithProxy(this.fetchImplementation, this.resolveEndpoint(), {
-        method: "POST",
-        headers: {
+      const response = await requestChatResponse(
+        this.fetchImplementation,
+        this.resolveEndpoint(),
+        this.baseUrl,
+        this.model,
+        {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
         },
-        body: JSON.stringify({
+        {
           model: this.model,
           messages,
           stream: true,
-        }),
-        signal: request.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = (await response.text()).slice(0, 4000);
-        throw new Error(
-          `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
-        );
-      }
+        },
+        request.signal,
+      );
 
       let fullText = "";
 
