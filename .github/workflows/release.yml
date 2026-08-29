@@ -38,7 +38,7 @@ jobs:
           npm whoami || echo "whoami 不可用（Granular token 无身份权限，属正常现象）"
 
       - name: 发布到 npm
-        run: npm publish
+        run: pnpm publish --no-git-checks
 
   github-release:
     name: 创建 GitHub Release
@@ -65,7 +65,7 @@ jobs:
         run: pnpm build
 
       - name: 生成发布包
-        run: npm pack
+        run: pnpm pack
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
