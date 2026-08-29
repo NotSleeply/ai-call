@@ -8,6 +8,7 @@ import {
   hasApiKey,
   isCompleteModelConfig,
   isConfirmationAnswer,
+  renderModelConfig,
   validateBaseUrl,
 } from "./model.js";
 
@@ -53,6 +54,22 @@ test("完整模型配置必须包含模型、有效地址和 API Key", () => {
     isCompleteModelConfig("gpt-5-mini", "https://api.openai.com/v1", ""),
     false,
   );
+});
+
+test("重新保存模型时配置文件只保留当前这一组配置", () => {
+  const content = renderModelConfig(
+    "gpt-5-mini",
+    "https://api.openai.com/v1",
+    "new-key",
+  );
+
+  assert.equal(
+    content,
+    "AIC_API_KEY=new-key\nAIC_BASE_URL=https://api.openai.com/v1\nAIC_MODEL=gpt-5-mini\n",
+  );
+  assert.equal(content.includes("DEEPSEEK_API_KEY"), false);
+  assert.equal(content.includes("old-key"), false);
+  assert.equal((content.match(/^AIC_/gm) ?? []).length, 3);
 });
 
 test("连接测试确认只接受单个 y 或 Y", () => {

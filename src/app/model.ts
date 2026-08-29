@@ -56,29 +56,16 @@ function envMap(lines: EnvLine[]): Map<string, string> {
   return values;
 }
 
-function renderEnvLines(
-  lines: EnvLine[],
-  updates: Map<string, string>,
+export function renderModelConfig(
+  modelName: string,
+  baseUrl: string,
+  apiKey: string,
 ): string {
-  const handled = new Set<string>();
-  const output: string[] = [];
-
-  for (const line of lines) {
-    if (line.key && updates.has(line.key)) {
-      output.push(`${line.key}=${updates.get(line.key) ?? ""}`);
-      handled.add(line.key);
-    } else {
-      output.push(line.raw);
-    }
-  }
-
-  for (const [key, value] of updates) {
-    if (!handled.has(key)) {
-      output.push(`${key}=${value}`);
-    }
-  }
-
-  return output.join("\n").trimEnd() + "\n";
+  return [
+    `AIC_API_KEY=${apiKey}`,
+    `AIC_BASE_URL=${baseUrl}`,
+    `AIC_MODEL=${modelName}`,
+  ].join("\n") + "\n";
 }
 
 export function resolveConfigPath(): string {
@@ -90,13 +77,13 @@ loadDotEnv({
   path: [".env", resolveConfigPath()],
 });
 
-function readUserConfig(): { content: string; values: Map<string, string> } {
+function readUserConfig(): { values: Map<string, string> } {
   const configPath = resolveConfigPath();
   const content = existsSync(configPath)
     ? readFileSync(configPath, "utf8")
     : "";
 
-  return { content, values: envMap(parseEnvLines(content)) };
+  return { values: envMap(parseEnvLines(content)) };
 }
 
 function effectiveValue(
@@ -146,16 +133,14 @@ export function hasApiKey(content: string): boolean {
 }
 
 interface CurrentModelConfig {
-  content: string;
   model: string;
   baseUrl: string;
   apiKey: string;
 }
 
 function readCurrentModelConfig(): CurrentModelConfig {
-  const { content, values } = readUserConfig();
+  const { values } = readUserConfig();
   return {
-    content,
     model: effectiveValue("AIC_MODEL", values),
     baseUrl: effectiveValue("AIC_BASE_URL", values),
     apiKey: effectiveValue("AIC_API_KEY", values),
@@ -243,10 +228,9 @@ async function runInteractiveModelSetup(
 
   return saveModelConfigAndMaybeTest(
     configPath,
-    config.content,
     modelName,
     baseUrl,
-    enteredApiKey || undefined,
+    enteredApiKey || config.apiKey,
   );
 }
 
@@ -292,23 +276,15 @@ export async function askToTestModelConnection(
 
 function saveModelConfig(
   configPath: string,
-  content: string,
   modelName: string,
   baseUrl: string,
-  enteredApiKey?: string,
+  apiKey: string,
 ): number {
-  const updates = new Map<string, string>();
-  if (enteredApiKey) {
-    updates.set("AIC_API_KEY", enteredApiKey);
-  }
-  updates.set("AIC_BASE_URL", baseUrl);
-  updates.set("AIC_MODEL", modelName);
-
   try {
     mkdirSync(dirname(configPath), { recursive: true });
     writeFileSync(
       configPath,
-      renderEnvLines(parseEnvLines(content), updates),
+      renderModelConfig(modelName, baseUrl, apiKey),
       { encoding: "utf8", mode: 0o600 },
     );
     if (process.platform !== "win32") {
@@ -322,9 +298,7 @@ function saveModelConfig(
 
   process.env.AIC_BASE_URL = baseUrl;
   process.env.AIC_MODEL = modelName;
-  if (enteredApiKey) {
-    process.env.AIC_API_KEY = enteredApiKey;
-  }
+  process.env.AIC_API_KEY = apiKey;
 
   process.stdout.write(`模型配置已保存到 ${configPath}\n`);
   process.stdout.write(`模型: ${modelName}\n`);
@@ -334,17 +308,15 @@ function saveModelConfig(
 
 async function saveModelConfigAndMaybeTest(
   configPath: string,
-  content: string,
   modelName: string,
   baseUrl: string,
-  enteredApiKey?: string,
+  apiKey: string,
 ): Promise<number> {
   const result = saveModelConfig(
     configPath,
-    content,
     modelName,
     baseUrl,
-    enteredApiKey,
+    apiKey,
   );
 
   if (result !== 0 || process.stdin.isTTY !== true) {
@@ -406,9 +378,8 @@ export async function runModel(args: CliArgs): Promise<number> {
 
   return saveModelConfigAndMaybeTest(
     configPath,
-    current.content,
     modelName,
     baseUrl,
-    enteredApiKey || undefined,
+    enteredApiKey || current.apiKey,
   );
 }
