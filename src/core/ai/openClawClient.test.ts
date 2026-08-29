@@ -17,6 +17,14 @@ const {
   STREAM_IDLE_TIMEOUT_MS,
 } = await import("./openClawClient.js");
 
+type FetchImplementation = typeof import("undici").fetch;
+
+function createClient() {
+  return new OpenClawClient(
+    globalThis.fetch as unknown as FetchImplementation,
+  );
+}
+
 after(() => {
   if (previousApiKey === undefined) delete process.env.AIC_API_KEY;
   else process.env.AIC_API_KEY = previousApiKey;
@@ -37,7 +45,7 @@ test("非流式 API 失败会抛出错误", async () => {
   };
 
   try {
-    const client = new OpenClawClient();
+    const client = createClient();
 
     await assert.rejects(
       client.generateReply("hello"),
@@ -67,7 +75,7 @@ test("API 请求会显式传递代理 dispatcher", async () => {
   process.env.https_proxy = "http://proxy-for-test.invalid:7890";
 
   try {
-    await new OpenClawClient().generateReply("hello");
+    await createClient().generateReply("hello");
     assert.ok(requestInit?.dispatcher);
   } finally {
     globalThis.fetch = previousFetch;
@@ -104,7 +112,7 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
   };
 
   try {
-    await new OpenClawClient().testConnection();
+    await createClient().testConnection();
   } finally {
     globalThis.fetch = previousFetch;
   }
@@ -123,7 +131,7 @@ test("fetch failed 会显示底层网络错误原因", async () => {
 
   try {
     await assert.rejects(
-      new OpenClawClient().generateReply("hello"),
+      createClient().generateReply("hello"),
       (error) => {
         assert.match(
           (error as Error).message,
@@ -170,7 +178,7 @@ test("流式响应已输出内容后不会重试请求", async () => {
 
   try {
     const deltas: string[] = [];
-    const client = new OpenClawClient();
+    const client = createClient();
 
     await assert.rejects(
       client.generateReplyStream(
@@ -210,7 +218,7 @@ test("传入的 AbortSignal 会中断请求", async () => {
   };
 
   try {
-    const pending = new OpenClawClient().generateReply("hello", [], {
+    const pending = createClient().generateReply("hello", [], {
       signal: controller.signal,
     });
     controller.abort();
@@ -244,7 +252,7 @@ test("请求在连接阶段无响应时超时", async () => {
     });
 
   try {
-    const pending = new OpenClawClient().generateReply("hello");
+    const pending = createClient().generateReply("hello");
     mock.timers.tick(REQUEST_TIMEOUT_MS);
 
     await assert.rejects(
@@ -280,7 +288,7 @@ test("流式响应长时间没有新内容时超时", async () => {
   };
 
   try {
-    const pending = new OpenClawClient().generateReplyStream("hello");
+    const pending = createClient().generateReplyStream("hello");
     mock.timers.tick(STREAM_IDLE_TIMEOUT_MS);
 
     await assert.rejects(

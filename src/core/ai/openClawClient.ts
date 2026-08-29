@@ -1,7 +1,11 @@
 import { config as loadDotEnv } from "dotenv";
 import { homedir } from "os";
 import { join } from "path";
-import type { Dispatcher } from "undici";
+import {
+  fetch as undiciFetch,
+  type RequestInit as UndiciRequestInit,
+  type Response as UndiciResponse,
+} from "undici";
 import { configureProxyDispatcher } from "../network/proxy.js";
 
 export type ChatRole = "system" | "user" | "assistant" | "tool";
@@ -306,20 +310,19 @@ loadDotEnv({
   path: [".env", join(homedir(), ".ai-call", ".env")],
 });
 
-type FetchInitWithDispatcher = RequestInit & {
-  dispatcher?: Dispatcher;
-};
+type FetchImplementation = typeof undiciFetch;
 
 function fetchWithProxy(
+  fetchImplementation: FetchImplementation,
   input: string,
-  init: RequestInit,
-): Promise<Response> {
+  init: UndiciRequestInit,
+): Promise<UndiciResponse> {
   const dispatcher = configureProxyDispatcher();
-  const requestInit: FetchInitWithDispatcher = dispatcher
+  const requestInit: UndiciRequestInit = dispatcher
     ? { ...init, dispatcher }
     : init;
 
-  return fetch(input, requestInit);
+  return fetchImplementation(input, requestInit);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -380,6 +383,10 @@ function normalizeToolCalls(value: unknown): ToolCall[] {
 }
 
 export class OpenClawClient {
+  constructor(
+    private readonly fetchImplementation: FetchImplementation = undiciFetch,
+  ) {}
+
   private readonly apiKey = (process.env.AIC_API_KEY || "").trim();
   private readonly model =
     (process.env.AIC_MODEL || "gpt-5-mini").trim() || "gpt-5-mini";
@@ -458,7 +465,7 @@ export class OpenClawClient {
         body.tool_choice = "auto";
       }
 
-      const response = await fetchWithProxy(this.resolveEndpoint(), {
+      const response = await fetchWithProxy(this.fetchImplementation, this.resolveEndpoint(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -543,7 +550,7 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
-      const response = await fetchWithProxy(this.resolveEndpoint(), {
+      const response = await fetchWithProxy(this.fetchImplementation, this.resolveEndpoint(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
