@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-10-13
+
 ### Changed
 
 - `aic model <名称>` 可以只切换当前模型，沿用已保存的 API 地址和 API Key
