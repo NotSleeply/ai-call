@@ -16,6 +16,15 @@ test("model 子命令解析模型名称和 API 地址", () => {
   assert.equal(args.prompt, "");
 });
 
+test("model 只给名称时切换当前模型", () => {
+  const args = parseCliArgs(["model", "gpt-6.1-sol"]);
+
+  assert.equal(args.subcommand, "model");
+  assert.equal(args.modelName, "gpt-6.1-sol");
+  assert.equal(args.baseUrl, undefined);
+  assert.equal(args.prompt, "");
+});
+
 test("model 不带参数时用于显示当前配置", () => {
   const args = parseCliArgs(["model"]);
 
@@ -127,8 +136,4 @@ test("执行权限、临时模型和旧配置显示参数已移除", () => {
   assert.throws(() => parseCliArgs(["--yes"]), CliArgError);
   assert.throws(() => parseCliArgs(["--show"]), CliArgError);
   assert.throws(() => parseCliArgs(["--no-stream"]), CliArgError);
-  assert.throws(
-    () => parseCliArgs(["model", "deepseek-chat"]),
-    /--base-url/,
-  );
 });

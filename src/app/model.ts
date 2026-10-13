@@ -302,16 +302,28 @@ export async function runModel(args: CliArgs): Promise<number> {
     return runInteractiveModelSetup(current);
   }
 
-  const baseUrl = args.baseUrl?.trim() ?? "";
+  const current = readCurrentModelConfig();
+  const configPath = resolveConfigPath();
+  const providedBaseUrl = args.baseUrl?.trim() ?? "";
+  const baseUrl = providedBaseUrl || current.baseUrl;
   if (!validateBaseUrl(baseUrl)) {
     process.stderr.write(
-      `${CLI_NAME}: --base-url 必须是有效的 http:// 或 https:// 地址\n`,
+      providedBaseUrl
+        ? `${CLI_NAME}: --base-url 必须是有效的 http:// 或 https:// 地址\n`
+        : `${CLI_NAME}: 尚未配置 API 地址，请同时提供 --base-url <地址>\n`,
     );
     return 1;
   }
 
-  const current = readCurrentModelConfig();
-  const configPath = resolveConfigPath();
+  if (!providedBaseUrl) {
+    return saveModelConfigAndMaybeTest(
+      configPath,
+      modelName,
+      baseUrl,
+      current.apiKey,
+    );
+  }
+
   const existingApiKey = current.apiKey;
   let enteredApiKey = "";
 

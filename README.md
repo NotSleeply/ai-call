@@ -74,15 +74,21 @@ aic model --init
 
 它会强制进入交互配置，已有值可以直接回车保留。每次保存都会重写用户级配置文件，模型配置只保留当前这一组，同时保留同一文件中的代理配置，不会与之前的模型配置共存。配置保存后会询问是否立即测试模型连接：输入 `y` 才测试，直接回车或输入其他内容都会跳过。测试失败不会回滚已经保存的配置。不要把 API Key 写进命令行参数。
 
-切换模型时可以继续使用非交互方式：
+只切换模型、沿用已保存的 API 地址和 API Key：
+
+```bash
+aic model gpt-5-mini
+```
+
+还没有保存过 API 地址时，这条命令会失败，需要同时给出地址。更换服务时使用：
 
 ```bash
 aic model deepseek-chat --base-url https://api.deepseek.com/v1
 ```
 
-命令会在交互终端中提示输入新的 API Key；直接回车可以保留当前 Key，保存后同样会询问是否测试连接。非交互环境不会询问测试连接。
+带 `--base-url` 时，交互终端会提示输入新的 API Key；直接回车保留当前 Key。只切换模型时不重新询问 API Key。配置保存后会询问是否立即测试模型连接：输入 `y` 才测试，直接回车或输入其他内容都会跳过。非交互环境不会询问测试连接。
 
-只支持 OpenAI-compatible Chat Completions API。模型名称不能用来自动推断 API 地址，因此切换服务时必须明确提供 `--base-url`。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
+只支持 OpenAI-compatible Chat Completions API。模型名称不能用来自动推断 API 地址，因此更换服务时必须明确提供 `--base-url`。DeepSeek、OpenAI、OpenRouter、Moonshot 等服务只需填写各自的 API 地址和模型名，不再单独选择提供方。配置按以下顺序读取（前面的优先）：
 
 1. 当前目录的 `.env`
 2. 用户级 `~/.ai-call/.env`（任意目录可用 `aic`）

@@ -37,7 +37,8 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   ${CLI_NAME} -c <问题>                  带上上一次对话的上下文继续提问
   ${CLI_NAME} model                      查看配置；不完整时进入交互配置
   ${CLI_NAME} model --init                强制进入交互配置
-  ${CLI_NAME} model <名称> --base-url <地址>  非交互设置当前模型和 API 地址
+  ${CLI_NAME} model <名称>                切换当前模型，沿用已保存的 API 地址
+  ${CLI_NAME} model <名称> --base-url <地址>  设置当前模型和 API 地址
   ${CLI_NAME} proxy                       查看当前代理配置
   ${CLI_NAME} proxy --init                交互配置标准网络代理
   ${CLI_NAME} clear                       清空本地 -c 对话历史
@@ -59,6 +60,7 @@ export const USAGE_TEXT = `AI Call - 终端 AI 助手
   git diff | ${CLI_NAME} "生成一行符合规范的 commit message"
   cat error.log | ${CLI_NAME} "总结最核心的报错原因"
   ${CLI_NAME} "用一句话解释这个报错" && ${CLI_NAME} -c "换一种说法"
+  ${CLI_NAME} model gpt-5-mini
   ${CLI_NAME} model deepseek-chat --base-url https://api.deepseek.com/v1
 `;
 
@@ -155,10 +157,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
 
     result.modelName = promptParts[0]?.trim();
     result.prompt = "";
-
-    if (result.modelName && !result.baseUrl) {
-      throw new CliArgError("设置模型时必须同时提供 --base-url <地址>");
-    }
 
     if (!result.modelName && result.baseUrl) {
       throw new CliArgError("设置 API 地址时必须同时提供模型名称");
