@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-10-13
+
+### Fixed
+
+- 模型在 chat completions 上拒绝函数工具时，自动改走 `/v1/responses`
+
 ## [1.0.15] - 2026-10-13
 
 ### Changed

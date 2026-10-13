@@ -329,6 +329,22 @@ function fetchWithProxy(
   return fetchImplementation(input, requestInit);
 }
 
+class ResponsesToolsRequiredError extends Error {
+  constructor() {
+    super("function tools require /v1/responses");
+    this.name = "ResponsesToolsRequiredError";
+  }
+}
+
+function isResponsesToolsRequired(status: number, errorText: string): boolean {
+  if (status !== 400) {
+    return false;
+  }
+
+  const message = errorText.toLowerCase();
+  return message.includes("/v1/responses") && message.includes("function tools");
+}
+
 function isUnsupportedReasoningEffortResponse(
   status: number,
   errorText: string,
@@ -380,13 +396,20 @@ async function requestChatResponse(
     });
 
     if (response.ok) {
-      if (sendsReasoningEffort) {
+      if (
+        sendsReasoningEffort &&
+        getReasoningCapability(baseUrl, model) !== "responses-tools"
+      ) {
         setReasoningCapability(baseUrl, model, "supports-none");
       }
       return response;
     }
 
     const errorText = (await response.text()).slice(0, 4000);
+    if (isResponsesToolsRequired(response.status, errorText)) {
+      throw new ResponsesToolsRequiredError();
+    }
+
     if (
       sendsReasoningEffort &&
       isUnsupportedReasoningEffortResponse(response.status, errorText)
@@ -534,6 +557,241 @@ function normalizeStreamToolCalls(
   return normalizeToolCalls(rawCalls);
 }
 
+function responsesMessageText(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (!Array.isArray(value)) {
+    return "";
+  }
+
+  return value
+    .map((part) => (isRecord(part) && typeof part.text === "string" ? part.text : ""))
+    .join("");
+}
+
+function toResponsesInput(messages: ChatMessage[]): {
+  instructions?: string;
+  input: unknown[];
+} {
+  const instructions: string[] = [];
+  const input: unknown[] = [];
+
+  for (const message of messages) {
+    if (message.role === "system") {
+      if (message.content) {
+        instructions.push(message.content);
+      }
+      continue;
+    }
+
+    if (message.role === "tool") {
+      input.push({
+        type: "function_call_output",
+        call_id: message.tool_call_id ?? "",
+        output: message.content ?? "",
+      });
+      continue;
+    }
+
+    if (message.role === "assistant" && message.tool_calls?.length) {
+      if (message.content) {
+        input.push({ role: "assistant", content: message.content });
+      }
+
+      for (const call of message.tool_calls) {
+        input.push({
+          type: "function_call",
+          call_id: call.id,
+          name: call.function.name,
+          arguments: call.function.arguments,
+        });
+      }
+      continue;
+    }
+
+    input.push({
+      role: message.role,
+      content: message.content ?? "",
+    });
+  }
+
+  return {
+    instructions: instructions.join("\n\n") || undefined,
+    input,
+  };
+}
+
+function buildResponsesBody(
+  model: string,
+  messages: ChatMessage[],
+  tools: ToolDefinition[],
+  stream: boolean,
+): Record<string, unknown> {
+  const { instructions, input } = toResponsesInput(messages);
+  const body: Record<string, unknown> = {
+    model,
+    input,
+    reasoning: { effort: "none" },
+  };
+
+  if (instructions) {
+    body.instructions = instructions;
+  }
+  if (stream) {
+    body.stream = true;
+  }
+  if (tools.length > 0) {
+    body.tools = tools.map((tool) => ({
+      type: "function",
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: tool.function.parameters,
+    }));
+    body.tool_choice = "auto";
+  }
+
+  return body;
+}
+
+function parseResponsesTurn(data: unknown): ChatTurn {
+  if (!isRecord(data)) {
+    throw new Error("模型返回了无法识别的消息内容格式");
+  }
+
+  const output = Array.isArray(data.output) ? data.output : [];
+  let content = "";
+  const rawCalls: unknown[] = [];
+
+  for (const item of output) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    if (item.type === "message") {
+      content += responsesMessageText(item.content);
+    }
+
+    if (item.type === "function_call") {
+      const id =
+        typeof item.call_id === "string" && item.call_id.trim()
+          ? item.call_id.trim()
+          : typeof item.id === "string"
+            ? item.id.trim()
+            : "";
+      const name = typeof item.name === "string" ? item.name.trim() : "";
+      const args =
+        typeof item.arguments === "string" && item.arguments.trim()
+          ? item.arguments
+          : "{}";
+      rawCalls.push({
+        id,
+        type: "function",
+        function: { name, arguments: args },
+      });
+    }
+  }
+
+  if (!content && typeof data.output_text === "string") {
+    content = data.output_text;
+  }
+
+  const toolCalls = rawCalls.length > 0 ? normalizeToolCalls(rawCalls) : [];
+  if (!content && toolCalls.length === 0) {
+    throw new Error("API 返回了空消息");
+  }
+
+  return { content, toolCalls };
+}
+
+function applyResponsesStreamEvent(
+  event: Record<string, unknown>,
+  state: {
+    text: string;
+    toolCalls: Map<number, StreamToolCallAccumulator>;
+    completed?: unknown;
+  },
+  onDelta?: (delta: string) => void,
+): void {
+  if (event.type === "response.output_text.delta" && typeof event.delta === "string" && event.delta) {
+    state.text += event.delta;
+    onDelta?.(event.delta);
+    return;
+  }
+
+  if (event.type === "response.output_item.added" && isRecord(event.item) && event.item.type === "function_call") {
+    const index = typeof event.output_index === "number" ? event.output_index : state.toolCalls.size;
+    const item = event.item;
+    state.toolCalls.set(index, {
+      id:
+        typeof item.call_id === "string"
+          ? item.call_id
+          : typeof item.id === "string"
+            ? item.id
+            : "",
+      type: "function",
+      name: typeof item.name === "string" ? item.name : "",
+      arguments: typeof item.arguments === "string" ? item.arguments : "",
+    });
+    return;
+  }
+
+  if (event.type === "response.function_call_arguments.delta" && typeof event.delta === "string") {
+    const index = typeof event.output_index === "number" ? event.output_index : 0;
+    const current = state.toolCalls.get(index) ?? {
+      id: "",
+      type: "function",
+      name: "",
+      arguments: "",
+    };
+    current.arguments += event.delta;
+    state.toolCalls.set(index, current);
+    return;
+  }
+
+  if (event.type === "response.function_call_arguments.done" && typeof event.arguments === "string") {
+    const index = typeof event.output_index === "number" ? event.output_index : 0;
+    const current = state.toolCalls.get(index) ?? {
+      id: "",
+      type: "function",
+      name: "",
+      arguments: "",
+    };
+    current.arguments = event.arguments;
+    state.toolCalls.set(index, current);
+    return;
+  }
+
+  if (event.type === "response.completed") {
+    state.completed = event.response;
+    return;
+  }
+
+  if (event.type === "error" || event.type === "response.failed") {
+    const message =
+      isRecord(event.error) && typeof event.error.message === "string"
+        ? event.error.message
+        : "Responses API 流式响应失败";
+    throw new Error(message);
+  }
+}
+
+function responsesToolCallsFromAccumulators(
+  accumulators: Map<number, StreamToolCallAccumulator>,
+): ToolCall[] {
+  for (const call of accumulators.values()) {
+    if (!call.type) {
+      call.type = "function";
+    }
+    if (!call.arguments.trim()) {
+      call.arguments = "{}";
+    }
+  }
+
+  return normalizeStreamToolCalls(accumulators);
+}
+
 export class OpenClawClient {
   constructor(
     private readonly fetchImplementation: FetchImplementation = undiciFetch,
@@ -556,6 +814,126 @@ export class OpenClawClient {
     return base.endsWith("/v1")
       ? `${base}/chat/completions`
       : `${base}/v1/chat/completions`;
+  }
+
+  private resolveResponsesEndpoint(): string {
+    const base = this.baseUrl.replace(/\/+$/, "");
+    if (base.endsWith("/responses")) {
+      return base;
+    }
+    if (base.endsWith("/chat/completions")) {
+      return base.replace(/\/chat\/completions$/, "/responses");
+    }
+
+    return base.endsWith("/v1")
+      ? `${base}/responses`
+      : `${base}/v1/responses`;
+  }
+
+  private shouldUseResponsesApi(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+  ): boolean {
+    if (getReasoningCapability(this.baseUrl, this.model) !== "responses-tools") {
+      return false;
+    }
+
+    return (
+      tools.length > 0 ||
+      messages.some(
+        (message) =>
+          message.role === "tool" || (message.tool_calls?.length ?? 0) > 0,
+      )
+    );
+  }
+
+  private rememberResponsesApi(): void {
+    setReasoningCapability(this.baseUrl, this.model, "responses-tools");
+  }
+
+  private async requestResponsesTurn(
+    messages: ChatMessage[],
+    tools: ToolDefinition[],
+    onDelta: ((delta: string) => void) | undefined,
+    request: RequestControl,
+  ): Promise<ChatTurn> {
+    const stream = onDelta !== undefined;
+    const response = await fetchWithProxy(
+      this.fetchImplementation,
+      this.resolveResponsesEndpoint(),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(
+          buildResponsesBody(this.model, messages, tools, stream),
+        ),
+        signal: request.signal,
+      },
+    );
+
+    if (!response.ok) {
+      const errorText = (await response.text()).slice(0, 4000);
+      throw new Error(
+        `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
+      );
+    }
+
+    if (!stream) {
+      return parseResponsesTurn(await response.json());
+    }
+
+    request.startIdleTimeout();
+    const state = {
+      text: "",
+      toolCalls: new Map<number, StreamToolCallAccumulator>(),
+      completed: undefined as unknown,
+    };
+
+    await this.readResponseLines(
+      response,
+      (line) => {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) {
+          return;
+        }
+
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === "[DONE]") {
+          return;
+        }
+
+        try {
+          const event = JSON.parse(payload) as unknown;
+          if (isRecord(event)) {
+            applyResponsesStreamEvent(event, state, onDelta);
+          }
+        } catch (error) {
+          if (error instanceof SyntaxError) {
+            return;
+          }
+          throw error;
+        }
+      },
+      () => request.noteActivity(),
+    );
+
+    const toolCalls = responsesToolCallsFromAccumulators(state.toolCalls);
+    if (state.text.trim() || toolCalls.length > 0) {
+      return { content: state.text.trim(), toolCalls };
+    }
+
+    if (state.completed !== undefined) {
+      const turn = parseResponsesTurn(state.completed);
+      if (turn.toolCalls.length === 0 && turn.content) {
+        onDelta?.(turn.content);
+      }
+      return turn;
+    }
+
+    return this.requestResponsesTurn(messages, tools, undefined, request);
   }
 
   private assertConfigured(): void {
@@ -606,6 +984,10 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
+      if (this.shouldUseResponsesApi(messages, tools)) {
+        return await this.requestResponsesTurn(messages, tools, undefined, request);
+      }
+
       const body: Record<string, unknown> = {
         model: this.model,
         messages,
@@ -616,18 +998,27 @@ export class OpenClawClient {
         body.tool_choice = "auto";
       }
 
-      const response = await requestChatResponse(
-        this.fetchImplementation,
-        this.resolveEndpoint(),
-        this.baseUrl,
-        this.model,
-        {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body,
-        request.signal,
-      );
+      let response;
+      try {
+        response = await requestChatResponse(
+          this.fetchImplementation,
+          this.resolveEndpoint(),
+          this.baseUrl,
+          this.model,
+          {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body,
+          request.signal,
+        );
+      } catch (error) {
+        if (!(error instanceof ResponsesToolsRequiredError)) {
+          throw error;
+        }
+        this.rememberResponsesApi();
+        return await this.requestResponsesTurn(messages, tools, undefined, request);
+      }
 
       const data = (await response.json()) as ChatCompletionsResponse;
       const message = data.choices?.[0]?.message;
@@ -698,6 +1089,10 @@ export class OpenClawClient {
     const request = createRequestControl(options.signal);
 
     try {
+      if (this.shouldUseResponsesApi(messages, tools)) {
+        return await this.requestResponsesTurn(messages, tools, onDelta, request);
+      }
+
       const body: Record<string, unknown> = {
         model: this.model,
         messages,
@@ -709,18 +1104,27 @@ export class OpenClawClient {
         body.tool_choice = "auto";
       }
 
-      const response = await requestChatResponse(
-        this.fetchImplementation,
-        this.resolveEndpoint(),
-        this.baseUrl,
-        this.model,
-        {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body,
-        request.signal,
-      );
+      let response;
+      try {
+        response = await requestChatResponse(
+          this.fetchImplementation,
+          this.resolveEndpoint(),
+          this.baseUrl,
+          this.model,
+          {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body,
+          request.signal,
+        );
+      } catch (error) {
+        if (!(error instanceof ResponsesToolsRequiredError)) {
+          throw error;
+        }
+        this.rememberResponsesApi();
+        return await this.requestResponsesTurn(messages, tools, onDelta, request);
+      }
 
       let fullText = "";
       const toolCallAccumulators = new Map<

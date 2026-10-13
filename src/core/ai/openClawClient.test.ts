@@ -131,6 +131,137 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
   }
 });
 
+test("函数工具被 chat completions 拒绝时改走 responses", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousModelForTest = process.env.AIC_MODEL;
+  process.env.AIC_MODEL = "gpt-6.1-sol";
+  const requests: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const tool = {
+    type: "function" as const,
+    function: {
+      name: "find_files",
+      description: "find files",
+      parameters: { type: "object", properties: {} },
+    },
+  };
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    requests.push({ url, body });
+
+    if (url.endsWith("/chat/completions")) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message:
+              "Function tools with reasoning_effort are not supported for gpt-6.1-sol in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'.",
+          },
+        }),
+        { status: 400, statusText: "Bad Request" },
+      );
+    }
+
+    const encoder = new TextEncoder();
+    const chunks = [
+      'data: {"type":"response.output_text.delta","delta":"你好"}\n\n',
+      'data: {"type":"response.output_item.added","output_index":1,"item":{"type":"function_call","call_id":"call-1","name":"find_files","arguments":""}}\n\n',
+      'data: {"type":"response.function_call_arguments.delta","output_index":1,"delta":"{\\"pattern\\":\\"*.ts\\"}"}\n\n',
+    ];
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) {
+            controller.enqueue(encoder.encode(chunk));
+          }
+          controller.close();
+        },
+      }),
+      { status: 200, headers: { "content-type": "text/event-stream" } },
+    );
+  };
+
+  try {
+    const deltas: string[] = [];
+    const turn = await createClient().generateAgentTurnStream(
+      [
+        { role: "system", content: "系统提示" },
+        { role: "user", content: "你好" },
+      ],
+      [tool],
+      (delta) => deltas.push(delta),
+    );
+
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0].url, "http://mock.invalid/v1/chat/completions");
+    assert.equal(requests[0].body.reasoning_effort, "none");
+    assert.equal(requests[1].url, "http://mock.invalid/v1/responses");
+    assert.equal(requests[1].body.stream, true);
+    assert.deepEqual(requests[1].body.reasoning, { effort: "none" });
+    assert.equal(requests[1].body.reasoning_effort, undefined);
+    assert.equal(requests[1].body.instructions, "系统提示");
+    assert.deepEqual(requests[1].body.tools, [
+      {
+        type: "function",
+        name: "find_files",
+        description: "find files",
+        parameters: { type: "object", properties: {} },
+      },
+    ]);
+    assert.equal(turn.content, "你好");
+    assert.deepEqual(deltas, ["你好"]);
+    assert.deepEqual(turn.toolCalls, [
+      {
+        id: "call-1",
+        type: "function",
+        function: {
+          name: "find_files",
+          arguments: '{"pattern":"*.ts"}',
+        },
+      },
+    ]);
+
+    requests.length = 0;
+    await createClient().generateAgentTurnStream(
+      [
+        { role: "user", content: "你好" },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: turn.toolCalls,
+        },
+        {
+          role: "tool",
+          content: "[]",
+          tool_call_id: "call-1",
+        },
+      ],
+      [tool],
+    );
+
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, "http://mock.invalid/v1/responses");
+    assert.deepEqual(requests[0].body.input, [
+      { role: "user", content: "你好" },
+      {
+        type: "function_call",
+        call_id: "call-1",
+        name: "find_files",
+        arguments: '{"pattern":"*.ts"}',
+      },
+      {
+        type: "function_call_output",
+        call_id: "call-1",
+        output: "[]",
+      },
+    ]);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousModelForTest === undefined) delete process.env.AIC_MODEL;
+    else process.env.AIC_MODEL = previousModelForTest;
+  }
+});
+
 test("工具请求在模型不支持 reasoning_effort 时回退", async () => {
   const previousFetch = globalThis.fetch;
   const previousModelForTest = process.env.AIC_MODEL;

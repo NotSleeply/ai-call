@@ -7,7 +7,10 @@ import {
 import { dirname, join } from "path";
 import { resolveDataDir } from "../paths.js";
 
-export type ReasoningCapability = "supports-none" | "rejects-none";
+export type ReasoningCapability =
+  | "supports-none"
+  | "rejects-none"
+  | "responses-tools";
 
 export const REASONING_CAPABILITY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -44,7 +47,11 @@ function normalizeModel(value: string): string {
 }
 
 function isReasoningCapability(value: unknown): value is ReasoningCapability {
-  return value === "supports-none" || value === "rejects-none";
+  return (
+    value === "supports-none" ||
+    value === "rejects-none" ||
+    value === "responses-tools"
+  );
 }
 
 function isFresh(timestamp: number, now: number): boolean {
