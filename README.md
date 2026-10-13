@@ -238,37 +238,6 @@ git diff HEAD | aic "检查这次改动是否有明显问题"
 
 ---
 
-## 项目结构
-
-```
-ai-call/
-├── src/
-│   ├── index.ts                    # 入口：参数路由
-│   └── app/
-│       ├── args.ts                 # 参数解析与帮助文本
-│       ├── one-shot.ts             # 单次问答（stdin 合并、历史加载、持久化）
-│       ├── model.ts                # aic model 模型配置
-│       ├── proxy.ts                # aic proxy 代理配置
-│       ├── data.ts                 # aic data --clear 数据清理
-│       ├── tty.ts                  # API Key 输入与转圈提示
-│       └── assistant.ts            # 助手门面
-├── src/core/
-│   ├── ai/openClawClient.ts        # OpenAI-compatible 客户端与 tool_calls
-│   ├── config.ts                    # 模型与代理共享配置文件
-│   ├── network/proxy.ts             # 标准代理环境与请求调度
-│   ├── agent/
-│       ├── runtime.ts              # 只读查询循环与工具调用
-│       └── tools.ts                # 文件查找、读取、正则搜索工具
-│   └── database/index.ts           # SQLite 数据库
-├── .github/workflows/release.yml   # 打 tag 自动发 npm 包与 GitHub Release
-├── data/                           # 数据文件（SQLite 数据库等）
-├── package.json
-├── tsconfig.json
-└── .env.example
-```
-
----
-
 ## QA常见问题
 
 **Q: 为什么做这个项目？**
