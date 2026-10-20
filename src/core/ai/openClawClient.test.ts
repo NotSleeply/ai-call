@@ -21,7 +21,9 @@ const {
   RequestTimeoutError,
   REQUEST_TIMEOUT_MS,
   STREAM_IDLE_TIMEOUT_MS,
+  requestApiResponse,
 } = await import("./openClawClient.js");
+const { setReasoningCapability } = await import("./reasoningCapabilities.js");
 
 type FetchImplementation = typeof import("undici").fetch;
 
@@ -115,7 +117,7 @@ test("连接测试会实际请求当前模型的聊天接口", async () => {
       { role: "user", content: "请回复 OK。" },
     ]);
     assert.equal(body.temperature, undefined);
-    assert.equal(body.reasoning_effort, "none");
+    assert.equal(body.reasoning_effort, undefined);
     assert.equal(body.stream, undefined);
 
     return new Response(
@@ -162,6 +164,21 @@ test("函数工具被 chat completions 拒绝时改走 responses", async () => {
       );
     }
 
+    // 复现原始报错：该模型拒绝 none，修复后请求应不携带推理强度。
+    if ((body.reasoning as { effort?: unknown } | undefined)?.effort === "none") {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: "Unsupported value: 'none' is not supported with the 'gpt-6.1-sol' model. Supported values are: 'low', 'medium', 'high', 'xhigh', and 'max'.",
+            type: "invalid_request_error",
+            param: "reasoning.effort",
+            code: "unsupported_value",
+          },
+        }),
+        { status: 400, statusText: "Bad Request" },
+      );
+    }
+
     const encoder = new TextEncoder();
     const chunks = [
       'data: {"type":"response.output_text.delta","delta":"你好"}\n\n',
@@ -194,10 +211,10 @@ test("函数工具被 chat completions 拒绝时改走 responses", async () => {
 
     assert.equal(requests.length, 2);
     assert.equal(requests[0].url, "http://mock.invalid/v1/chat/completions");
-    assert.equal(requests[0].body.reasoning_effort, "none");
+    assert.equal(requests[0].body.reasoning_effort, undefined);
     assert.equal(requests[1].url, "http://mock.invalid/v1/responses");
     assert.equal(requests[1].body.stream, true);
-    assert.deepEqual(requests[1].body.reasoning, { effort: "none" });
+    assert.equal(requests[1].body.reasoning, undefined);
     assert.equal(requests[1].body.reasoning_effort, undefined);
     assert.equal(requests[1].body.instructions, "系统提示");
     assert.deepEqual(requests[1].body.tools, [
@@ -262,63 +279,84 @@ test("函数工具被 chat completions 拒绝时改走 responses", async () => {
   }
 });
 
-test("工具请求在模型不支持 reasoning_effort 时回退", async () => {
-  const previousFetch = globalThis.fetch;
-  const previousModelForTest = process.env.AIC_MODEL;
-  process.env.AIC_MODEL = "unsupported-reasoning-model";
-  const requestBodies: Array<Record<string, unknown>> = [];
+for (const endpoint of ["chat/completions", "responses"]) {
+  test(`${endpoint} 的推理强度不受支持时移除参数并只重试一次`, async () => {
+    const requestBodies: Array<Record<string, unknown>> = [];
+    const effortParam = endpoint === "responses" ? "reasoning.effort" : "reasoning_effort";
+    const body = {
+      model: "gpt-6.1-sol",
+      ...(endpoint === "responses"
+        ? { input: "hello", reasoning: { effort: "none", summary: "auto" } }
+        : { messages: [{ role: "user", content: "hello" }], reasoning_effort: "none" }),
+    };
+    const fetchImplementation = (async (_input, init) => {
+      requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      if (requestBodies.length === 1) {
+        return new Response(JSON.stringify({ error: {
+          message: "Unsupported value: 'none' is not supported with the 'gpt-6.1-sol' model. Supported values are: 'low', 'medium', 'high', 'xhigh', and 'max'.",
+          type: "invalid_request_error",
+          param: effortParam,
+          code: "unsupported_value",
+        } }), { status: 400, statusText: "Bad Request" });
+      }
+      return new Response("OK", { status: 200 });
+    }) as FetchImplementation;
 
-  globalThis.fetch = async (_input, init) => {
-    requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-
-    if (requestBodies.length === 1) {
-      return new Response(
-        JSON.stringify({
-          error: {
-            message:
-              "Function tools with reasoning_effort are not supported for this model",
-          },
-        }),
-        { status: 400, statusText: "Bad Request" },
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
-      { status: 200, headers: { "content-type": "application/json" } },
+    const response = await requestApiResponse(
+      fetchImplementation,
+      `http://mock.invalid/v1/${endpoint}`,
+      {},
+      body,
+      new AbortController().signal,
     );
-  };
-
-  try {
-    const turn = await createClient().generateAgentTurn(
-      [{ role: "user", content: "hello" }],
-      [
-        {
-          type: "function",
-          function: {
-            name: "find_files",
-            description: "find files",
-            parameters: { type: "object", properties: {} },
-          },
-        },
-      ],
-    );
-
-    assert.equal(turn.content, "OK");
+    assert.equal(await response.text(), "OK");
     assert.equal(requestBodies.length, 2);
-    assert.equal(requestBodies[0].reasoning_effort, "none");
+    assert.deepEqual(requestBodies[0], body);
     assert.equal(requestBodies[1].reasoning_effort, undefined);
-  } finally {
-    globalThis.fetch = previousFetch;
-    if (previousModelForTest === undefined) delete process.env.AIC_MODEL;
-    else process.env.AIC_MODEL = previousModelForTest;
-  }
-});
+    assert.deepEqual(requestBodies[1].reasoning, endpoint === "responses" ? { summary: "auto" } : undefined);
+    assert.deepEqual(body, requestBodies[0]);
+  });
 
-test("已记录模型不支持 reasoning_effort 后后续请求不再重试", async () => {
+  for (const scenario of ["unrelated-error", "repeated-error", "no-effort"]) {
+    test(`${endpoint} 不会因 ${scenario} 反复重试`, async () => {
+      const requestBodies: Array<Record<string, unknown>> = [];
+      const effortParam = endpoint === "responses" ? "reasoning.effort" : "reasoning_effort";
+      const body: Record<string, unknown> = { model: "gpt-6.1-sol" };
+      if (scenario !== "no-effort") {
+        if (endpoint === "responses") body.reasoning = { effort: "none" };
+        else body.reasoning_effort = "none";
+      }
+      const fetchImplementation = (async (_input, init) => {
+        requestBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(JSON.stringify({ error: {
+          message: "Unsupported value",
+          param: scenario === "unrelated-error" ? "tools" : effortParam,
+          code: "unsupported_value",
+        } }), { status: 400, statusText: "Bad Request" });
+      }) as FetchImplementation;
+
+      await assert.rejects(
+        requestApiResponse(
+          fetchImplementation,
+          `http://mock.invalid/v1/${endpoint}`,
+          {},
+          body,
+          new AbortController().signal,
+        ),
+        /API 请求失败: HTTP 400 Bad Request/,
+      );
+      assert.equal(requestBodies.length, scenario === "repeated-error" ? 2 : 1);
+      if (scenario === "repeated-error") {
+        assert.equal(requestBodies[1].reasoning_effort, undefined);
+        assert.equal(requestBodies[1].reasoning, undefined);
+      }
+    });
+  }
+}
+
+test("已有推理能力缓存不会重新注入 none", async () => {
   const previousFetch = globalThis.fetch;
   const previousModelForTest = process.env.AIC_MODEL;
-  process.env.AIC_MODEL = "cached-reject-model";
   const requestBodies: Array<Record<string, unknown>> = [];
 
   globalThis.fetch = async (_input, init) => {
@@ -326,18 +364,6 @@ test("已记录模型不支持 reasoning_effort 后后续请求不再重试", as
       JSON.parse(String(init?.body)) as Record<string, unknown>,
     );
 
-    if (requestBodies.length === 1) {
-      return new Response(
-        JSON.stringify({
-          error: {
-            message:
-              "Function tools with reasoning_effort are not supported for this model",
-          },
-        }),
-        { status: 400, statusText: "Bad Request" },
-      );
-    }
-
     return new Response(
       JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
       { status: 200, headers: { "content-type": "application/json" } },
@@ -345,40 +371,15 @@ test("已记录模型不支持 reasoning_effort 后后续请求不再重试", as
   };
 
   try {
-    const client = createClient();
-    await client.generateAgentTurn(
-      [{ role: "user", content: "hello" }],
-      [
-        {
-          type: "function",
-          function: {
-            name: "find_files",
-            description: "find files",
-            parameters: { type: "object", properties: {} },
-          },
-        },
-      ],
-    );
-
-    assert.equal(requestBodies.length, 2);
-    assert.equal(requestBodies[0].reasoning_effort, "none");
-    assert.equal(requestBodies[1].reasoning_effort, undefined);
-
-    requestBodies.length = 0;
-    globalThis.fetch = async (_input, init) => {
-      const requestBody = JSON.parse(
-        String(init?.body),
-      ) as Record<string, unknown>;
-      requestBodies.push(requestBody);
-      return new Response(
-        JSON.stringify({ choices: [{ message: { content: "OK" } }] }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    };
-
-    await createClient().generateReply("hello");
-    assert.equal(requestBodies.length, 1);
-    assert.equal(requestBodies[0].reasoning_effort, undefined);
+    for (const status of ["supports-none", "rejects-none"] as const) {
+      process.env.AIC_MODEL = `cached-${status}-model`;
+      setReasoningCapability("http://mock.invalid/v1", process.env.AIC_MODEL, status);
+      requestBodies.length = 0;
+      await createClient().generateReply("hello");
+      assert.equal(requestBodies.length, 1);
+      assert.equal(requestBodies[0].reasoning_effort, undefined);
+      assert.equal(requestBodies[0].reasoning, undefined);
+    }
   } finally {
     globalThis.fetch = previousFetch;
     if (previousModelForTest === undefined) delete process.env.AIC_MODEL;
@@ -541,7 +542,7 @@ test("流式响应中断后不重试且不强制发送 temperature", async () =>
       stream?: unknown;
     };
     assert.equal(requestBody.temperature, undefined);
-    assert.equal(requestBody.reasoning_effort, "none");
+    assert.equal(requestBody.reasoning_effort, undefined);
     assert.equal(requestBody.stream, true);
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {

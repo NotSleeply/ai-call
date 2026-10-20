@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [1.0.17] - 2026-10-20
+
+### Fixed
+
+- 不再默认发送推理强度 `none`，修复 `gpt-6.1-sol` 等模型返回 HTTP 400 的问题
+- Chat Completions 和 Responses 统一处理不支持的推理强度参数，移除参数后最多重试一次
+
 ## [1.0.16] - 2026-10-13
 
 ### Fixed

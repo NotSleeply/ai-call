@@ -354,7 +354,10 @@ function isUnsupportedReasoningEffortResponse(
   }
 
   const message = errorText.toLowerCase();
-  if (!message.includes("reasoning_effort")) {
+  if (
+    !message.includes("reasoning_effort") &&
+    !message.includes("reasoning.effort")
+  ) {
     return false;
   }
 
@@ -370,22 +373,15 @@ function isUnsupportedReasoningEffortResponse(
   ].some((marker) => message.includes(marker));
 }
 
-async function requestChatResponse(
+export async function requestApiResponse(
   fetchImplementation: FetchImplementation,
   input: string,
-  baseUrl: string,
-  model: string,
   headers: Record<string, string>,
   body: Record<string, unknown>,
   signal: AbortSignal,
 ): Promise<UndiciResponse> {
-  const cachedCapability = getReasoningCapability(baseUrl, model);
-  let sendsReasoningEffort = cachedCapability !== "rejects-none";
   let requestBody: Record<string, unknown> = { ...body };
-
-  if (sendsReasoningEffort) {
-    requestBody.reasoning_effort = "none";
-  }
+  let retriedWithoutReasoning = false;
 
   while (true) {
     const response = await fetchWithProxy(fetchImplementation, input, {
@@ -396,12 +392,6 @@ async function requestChatResponse(
     });
 
     if (response.ok) {
-      if (
-        sendsReasoningEffort &&
-        getReasoningCapability(baseUrl, model) !== "responses-tools"
-      ) {
-        setReasoningCapability(baseUrl, model, "supports-none");
-      }
       return response;
     }
 
@@ -411,13 +401,24 @@ async function requestChatResponse(
     }
 
     if (
-      sendsReasoningEffort &&
+      !retriedWithoutReasoning &&
+      (requestBody.reasoning_effort !== undefined ||
+        (isRecord(requestBody.reasoning) &&
+          requestBody.reasoning.effort !== undefined)) &&
       isUnsupportedReasoningEffortResponse(response.status, errorText)
     ) {
-      setReasoningCapability(baseUrl, model, "rejects-none");
       requestBody = { ...requestBody };
       delete requestBody.reasoning_effort;
-      sendsReasoningEffort = false;
+      if (isRecord(requestBody.reasoning)) {
+        const reasoning = { ...requestBody.reasoning };
+        delete reasoning.effort;
+        if (Object.keys(reasoning).length > 0) {
+          requestBody.reasoning = reasoning;
+        } else {
+          delete requestBody.reasoning;
+        }
+      }
+      retriedWithoutReasoning = true;
       continue;
     }
 
@@ -633,7 +634,6 @@ function buildResponsesBody(
   const body: Record<string, unknown> = {
     model,
     input,
-    reasoning: { effort: "none" },
   };
 
   if (instructions) {
@@ -858,28 +858,16 @@ export class OpenClawClient {
     request: RequestControl,
   ): Promise<ChatTurn> {
     const stream = onDelta !== undefined;
-    const response = await fetchWithProxy(
+    const response = await requestApiResponse(
       this.fetchImplementation,
       this.resolveResponsesEndpoint(),
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(
-          buildResponsesBody(this.model, messages, tools, stream),
-        ),
-        signal: request.signal,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
       },
+      buildResponsesBody(this.model, messages, tools, stream),
+      request.signal,
     );
-
-    if (!response.ok) {
-      const errorText = (await response.text()).slice(0, 4000);
-      throw new Error(
-        `API 请求失败: HTTP ${response.status} ${response.statusText}: ${errorText}`,
-      );
-    }
 
     if (!stream) {
       return parseResponsesTurn(await response.json());
@@ -1000,11 +988,9 @@ export class OpenClawClient {
 
       let response;
       try {
-        response = await requestChatResponse(
+        response = await requestApiResponse(
           this.fetchImplementation,
           this.resolveEndpoint(),
-          this.baseUrl,
-          this.model,
           {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.apiKey}`,
@@ -1106,11 +1092,9 @@ export class OpenClawClient {
 
       let response;
       try {
-        response = await requestChatResponse(
+        response = await requestApiResponse(
           this.fetchImplementation,
           this.resolveEndpoint(),
-          this.baseUrl,
-          this.model,
           {
             "Content-Type": "application/json",
             Authorization: `Bearer ${this.apiKey}`,
